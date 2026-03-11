@@ -10,3 +10,5 @@ def hash_password (password: str):
 
 def verify_password (password: str, hash: str):
   return pwd_context.verify(password, hash)
+
+# test

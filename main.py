@@ -2,6 +2,8 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from fastapi.requests import Request
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from db import db_url
+import asyncpg
 
 app = FastAPI()
 
@@ -25,11 +27,15 @@ def get_info():
     }
 
 @app.get("/students")
-def get_students():
-    return [
-        {"id": 1, "name": "Ivan"},
-        {"id": 2, "name": "Anna"}
-    ]
+async def get_students():
+    
+    conn = await asyncpg.connect(db_url)
+    
+    rows = await conn.fetch("SELECT id, name FROM users")
+    
+    await conn.close()
+    
+    return [dict(row) for row in rows]
 
 @app.exception_handler(404)
 async def not_found_handler(request: Request, exc):

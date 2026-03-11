@@ -1,2 +1,8 @@
 # булим venv <3
 /.venv/
+
+# а тут булим .env -_-
+.env
+
+# забыл про __pycache__
+/__pycache__/

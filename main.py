@@ -6,13 +6,24 @@ import asyncpg
 
 
 # из проекта
-from db import db_url
-from schemas import register, login
+from db import create_pool, close_pool
+import db
+from schemas import Register, Login, GradePost
 from security import hash_password, verify_password
 from jwt_handler import create_access_token
 from auth import get_user
 
 app = FastAPI()
+
+# <! Event handlers !> #
+
+@app.on_event("startup")
+async def startup():
+    await create_pool()
+
+@app.on_event("shutdown")
+async def shutdown():
+    await close_pool()
 
 # <! GET-запросы !> #       (да, я просто теряю время на красивом оформлении комментариев)
 @app.get("/")
@@ -25,16 +36,13 @@ def root():
 @app.get("/students/me/subjects")
 async def get_subjects(current_user = Depends(get_user)):
     
-    conn = await asyncpg.connect(db_url)
-    
-    subjects = await conn.fetch(
+    async with db.pool.acquire() as conn:
+        subjects = await conn.fetch(
         """SELECT subjects.id, subjects.name FROM subjects
         JOIN students ON students.class_id = subjects.class_id
         WHERE students.user_id = $1""",
         current_user["id"]
     )
-    
-    await conn.close()
     
     return [dict(row) for row in subjects]
 
@@ -49,14 +57,10 @@ def get_info():
 @app.get("/students")
 async def get_students(student_id: int):
     
-    conn = await asyncpg.connect(db_url)
-    
-    students = await conn.fetch("""SELECT users.name FROM students
+    async with db.pool.acquire() as conn:
+        students = await conn.fetch("""SELECT users.name FROM students
                             JOIN users ON students.user_id = users.id
                             WHERE students.id = $1""", student_id)
-    
-    await conn.close()
-    
     
     if students is None:
         raise HTTPException(
@@ -72,13 +76,10 @@ async def get_current_user(current_user = Depends(get_user)):
 @app.get("/students/me")
 async def get_current_student(current_user = Depends(get_user)):
     
-    conn = await asyncpg.connect(db_url)
-    
-    student = await conn.fetchrow("""
+    async with db.pool.acquire() as conn:
+        student = await conn.fetchrow("""
         SELECT * FROM students WHERE user_id = $1""", current_user["id"]
     )
-    
-    await conn.close()
     
     student_id = student["id"]
     class_id = student["class_id"]
@@ -87,47 +88,40 @@ async def get_current_student(current_user = Depends(get_user)):
 # <! POST-запросы!> #
 
 @app.post("/auth/register")
-async def register(user: register):
+async def register(user: Register):
     
-    conn = await asyncpg.connect(db_url)
-    
-    existing_user = await conn.fetchrow(
+    async with db.pool.acquire() as conn:
+        existing_user = await conn.fetchrow(
         "SELECT id FROM users WHERE email = $1", user.email)
+        
+        if existing_user:
+            raise HTTPException(
+                status_code=400,
+                detail="Email already registered"
+            )
     
-    if existing_user:
-        await conn.close()
-        raise HTTPException(
-            status_code=400,
-            detail="Email already registered"
+        password_hash = hash_password(user.password)
+
+        await conn.execute(
+            """
+            INSERT INTO users (name, email, passwd_hash, role)
+            VALUES ($1, $2, $3, $4)
+            """,
+            user.name,
+            user.email,
+            password_hash,
+            user.role
         )
-    
-    password_hash = hash_password(user.password)
-    
-    await conn.execute(
-        """
-        INSERT INTO users (name, email, passwd_hash, role)
-        VALUES ($1, $2, $3, $4)
-        """,
-        user.name,
-        user.email,
-        password_hash,
-        user.role
-    )
-    
-    await conn.close()
     
     return {"message": "User created"}
 
 @app.post("/auth/login")
-async def login(user: login):
+async def login(user: Login):
     
-    conn = await asyncpg.connect(db_url)
-    
-    db_user = await conn.fetchrow(
+    async with db.pool.acquire() as conn:
+        db_user = await conn.fetchrow(
         "SELECT * FROM users WHERE email = $1", user.email
     )
-    
-    await conn.close()
     
     if not db_user:
         raise HTTPException(
@@ -146,6 +140,30 @@ async def login(user: login):
     )
     
     return {"access_token": token}
+
+@app.post("/grades")
+async def grades (grades: GradePost, current_user = Depends(get_user)):
+    
+    if current_user["role"] != "teacher":
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden :|"
+        )
+    
+    async with db.pool.acquire() as conn:
+        await conn.execute(
+        """
+        INSERT INTO grades (student_id, subject_id, grade)
+        VALUES ($1, $2, $3)
+        """,
+        grades.student_id,
+        grades.subject_id,
+        grades.grade
+    )
+    
+    return {"status": "Successful"}
+
+# <! Error Handlers !> #        my English is very well)
 
 @app.exception_handler(404)
 async def not_found_handler(request: Request, exc):

@@ -6,5 +6,14 @@ load_dotenv()
 
 db_url = os.getenv("db_url", "postgres://postgres@localhost/nolejje")
 
-async def connect_db():
-  return await asyncpg.connect(db_url)
+pool = None
+
+async def create_pool():
+  global pool
+  pool = await asyncpg.create_pool(dsn=db_url)
+
+async def close_pool():
+  global pool
+  if pool:
+    await pool.close()
+    pool = None

@@ -30,7 +30,7 @@ async def get_subjects(current_user = Depends(get_user)):
     subjects = await conn.fetch(
         """SELECT subjects.id, subjects.name FROM subjects
         JOIN students ON students.class_id = subjects.class_id
-        WHERE user_id = $1""",
+        WHERE students.user_id = $1""",
         current_user["id"]
     )
     

@@ -88,7 +88,24 @@ async def get_current_student(current_user = Depends(get_user)):
 @app.get("/students/me/homework")
 async def get_homework (current_user = Depends(get_user)):
     
-    pass
+    async with db.pool.acquire() as conn:
+        
+        student = await conn.fetchrow("""
+            SELECT * FROM students WHERE user_id = $1
+            """,
+            current_user["id"]
+            )
+        
+        homework = await conn.fetch("""
+            SELECT h.id, h.title, h.description, h.due_date FROM subjects
+            JOIN homeworks h ON h.subject_id = subjects.id
+            WHERE students.class_id = $1
+            ORDER BY h.due_date ASC;
+            """,
+            student["class_id"]
+            )
+    
+    return [dict(row) for row in homework]
 
 # <! POST-запросы!> #
 

@@ -29,6 +29,13 @@ app.add_middleware(
 async def get_current_student(current_user=Depends(get_user)):
     async with db.pool.acquire() as conn:
         student = await conn.fetchrow("SELECT * FROM students WHERE user_id=$1", current_user["id"])
+        
+        if student == None:
+            raise HTTPException(
+                status_code=404,
+                detail="Not Found"
+            )
+        
         if not student:
             raise HTTPException(status_code=404, detail="Мы перерыли всю бд, но так его и не нашли :(")
     return student
@@ -109,9 +116,11 @@ async def get_homeworks (student = Depends(get_current_student)):
             )
         
         homeworks = await conn.fetch("""
-            SELECT h.id, h.title, h.description, h.due_date FROM subjects
-            JOIN homeworks h ON h.subject_id = subjects.id
-            WHERE subjects.class_id = $1
+            SELECT h.id, h.title, h.due_date, su.name as subject_name FROM students st
+            JOIN classes c ON st.class_id = c.id
+            JOIN subjects su ON c.id = su.class_id
+            LEFT JOIN homeworks h ON h.subject_id = su.id
+            WHERE st.class_id = $1
             ORDER BY h.due_date ASC;
             """,
             student["class_id"]
@@ -130,10 +139,22 @@ async def get_homework (subject_id: int, current_user = Depends(get_user)):
             current_user["id"]
             )
         
+        if class_id == None:
+            raise HTTPException(
+                status_code=404,
+                detail="Not Found"
+            )
+        
         subject_class_id = await conn.fetchrow("""
             SELECT class_id FROM subjects WHERE id = $1 
             """,
             subject_id
+            )
+        
+        if subject_class_id == None:
+            raise HTTPException(
+                status_code=404,
+                detail="Not Found"
             )
         
         if class_id["class_id"] == subject_class_id["class_id"]:
@@ -233,10 +254,10 @@ async def grades (grades: GradePost, current_user = Depends(get_user)):
     
     
     if current_user["role"] != "teacher":
-            raise HTTPException(
-                status_code=403,
-                detail="Forbidden :|"
-            )
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden :|"
+        )
     
     async with db.pool.acquire() as conn:
         
@@ -259,6 +280,12 @@ async def grades (grades: GradePost, current_user = Depends(get_user)):
             grades.subject_id
             )
         
+        if subject_teacher_class_id == None:
+            raise HTTPException(
+                status_code=404,
+                detail="Not Found"
+            )
+        
         if teacher_id["id"] != subject_teacher_class_id["teacher_id"]:
             raise HTTPException(
                 status_code=403,
@@ -269,6 +296,12 @@ async def grades (grades: GradePost, current_user = Depends(get_user)):
             SELECT class_id FROM students WHERE id = $1
             """,
             grades.student_id
+            )
+        
+        if student_class_id == None:
+            raise HTTPException(
+                status_code=404,
+                detail="Not Found"
             )
         
         if subject_teacher_class_id["class_id"] != student_class_id["class_id"]:

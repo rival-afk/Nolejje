@@ -1,11 +1,13 @@
+# FAST API
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.responses import JSONResponse
 from fastapi.requests import Request
 from fastapi.middleware.cors import CORSMiddleware
-#from starlette.exceptions import HTTPException as StarletteHTTPException
+# внешние импорты
 import time
 import requests
 import json
+from typing import Optional
 
 # из проекта
 from db import create_pool, close_pool
@@ -113,7 +115,7 @@ async def get_current_student(student = Depends(get_current_student)):
     return {"student_id": student_id, "class_id": class_id}
 
 @app.get("/students/me/homeworks")
-async def get_homeworks (student = Depends(get_current_student)):
+async def get_homeworks (limit: Optional[int] = None, offset: Optional[int] = None, only_active: Optional[bool] = None, student = Depends(get_current_student)):
     
     async with db.pool.acquire() as conn:
         
@@ -123,15 +125,37 @@ async def get_homeworks (student = Depends(get_current_student)):
                 detail="Student not found :\\"
             )
         
-        homeworks = await conn.fetch("""
+        params = [student["class_id"]]
+        
+        order = " ORDER BY h.due_date ASC"
+        only_active_query = f" AND h.due_date >= CURRENT_DATE"
+        
+        request = """
             SELECT h.id, h.title, h.due_date, su.name as subject_name FROM students st
             JOIN classes c ON st.class_id = c.id
             JOIN subjects su ON c.id = su.class_id
-            LEFT JOIN homeworks h ON h.subject_id = su.id
+            JOIN homeworks h ON h.subject_id = su.id
             WHERE st.class_id = $1
-            ORDER BY h.due_date ASC;
-            """,
-            student["class_id"]
+            """
+        
+        if only_active:
+            request += only_active_query
+        
+        request += order
+        
+        if limit != None:
+            limit_query = f" LIMIT ${len(params) + 1}"
+            request += limit_query
+            params.append(limit)
+        
+        if offset != None:
+            offset_query = f" OFFSET ${len(params) + 1}"
+            request += offset_query
+            params.append(offset)
+        
+        homeworks = await conn.fetch(
+            request,
+            *params
             )
     
     return [dict(row) for row in homeworks]

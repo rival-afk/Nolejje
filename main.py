@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 #from starlette.exceptions import HTTPException as StarletteHTTPException
 import time
 import requests
+import json
 
 # из проекта
 from db import create_pool, close_pool
@@ -75,9 +76,13 @@ async def get_subjects(current_user = Depends(get_user)):
 @app.get("/info")
 def get_info():
     
+    with open ("version.json") as file:
+        version = json.load(file)
+    
     return {
         "name": "Nolejje",
-        "version": "beta 4.8.0"
+        "version": version["version"],
+        "updated": version["updated"]
     }
 
 @app.get("/students")

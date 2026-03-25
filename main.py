@@ -199,7 +199,7 @@ async def get_ping():
     rounded_ds = round(diff_sec)
     return {
         "message": "Pong!",
-        "ping": rounded_ds
+        "ping": f"{rounded_ds} ms"
     }
 
 @app.get("/status")

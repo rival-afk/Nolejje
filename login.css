@@ -1,0 +1,38 @@
+body {
+  display: flex;
+  background-color: #1e1e1e;
+  flex-direction: column;
+  min-height: 100vh;
+  margin: 0;
+}
+
+.root {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.login_window {
+  display: flex;
+  flex-direction: column;
+  background-color: #2a2a2a;
+  width: 300px;
+  height: 400px;
+  padding: 20px;
+  outline: 3px solid #333333;
+  border-radius: 25px;
+}
+
+.login_h1 {
+  display: flex;
+  margin: 0 0 20px 0;
+  text-align: center;
+  align-items: flex-start;
+}
+
+.login_input {
+  display: flex;
+  align-items: center;
+  margin: 0 0 20px 0;
+}

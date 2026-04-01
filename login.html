@@ -19,24 +19,25 @@
       <div id="register">
         <h1 class="h1">Добро пожаловать</h1>
         <div class="inputs">
-          <input class="input" type="text" placeholder="Имя">
-          <input class="input" type="email" placeholder="Почта">
-          <input class="input" type="password" placeholder="Пароль">
+          <input class="input" id="register-name" type="text" placeholder="Имя">
+          <input class="input" id="register-email" type="email" placeholder="Почта">
+          <input class="input" id="register-password" type="password" placeholder="Пароль">
           <div class="role_tabs">
             <button class="role_tab">Ученик</button>
             <button class="role_tab">Учитель</button>
             <button class="role_tab">Админ</button>
           </div>
         </div>
-        <button class="button">Зарегестрироваться</button>
+        <button class="button" id="register-button">Зарегестрироваться</button>
       </div>
       <div id="login">
         <h1 class="h1">С возвращением</h1>
         <div class="inputs">
-          <input class="input" type="email" placeholder="Почта">
-          <input class="input" type="password" placeholder="Пароль">
+          <input class="input" id="login-email" type="email" placeholder="Почта">
+          <input class="input" id="login-password" type="password" placeholder="Пароль">
         </div>
-        <button class="button">Войти</button>
+        <button class="button" id="login-button">Войти</button>
+        <div id="error"></div>
       </div>
     </div>
   </div>

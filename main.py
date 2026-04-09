@@ -262,12 +262,12 @@ async def get_status():
 async def get_classes():
     async with db.pool.acquire() as conn:
         
-        list = await conn.fetch("""
-            SELECT schools.name, classes.number || classes.letter AS class FROM classes
+        classes_list = await conn.fetch("""
+            SELECT classes.id, schools.name, classes.number || classes.letter AS class FROM classes
             JOIN schools ON schools.id = classes.school_id
             """)
     
-    return [dict(row) for row in list]
+    return [dict(row) for row in classes_list]
 
 # <! POST-запросы!> #
 

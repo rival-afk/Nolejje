@@ -299,7 +299,7 @@ async def register(user: Register):
             )
         
         class_exist = await conn.fetchval(
-                """SELECT 1 FROM classes WHERE class_id = $1""", user.class_id
+                """SELECT 1 FROM classes WHERE id = $1""", user.class_id
             )
         
         if not class_exist:
@@ -333,11 +333,10 @@ async def register(user: Register):
         
         if user.role == 'teacher':
             await conn.execute("""
-                INSERT INTO teachers (user_id, class_id)
-                VALUES ($1, $2)
+                INSERT INTO teachers (user_id)
+                VALUES ($1)
                 """,
-                user_id,
-                user.class_id
+                user_id
                 )
     
     return {"message": "User created"}

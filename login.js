@@ -81,7 +81,7 @@ loginButton.addEventListener("click", function () {
     window.location.href = "/dashboard.html";
   })
   .catch(error => {
-    document.getElementById("error").textContent = "Неверный логин или пароль"
+    document.getElementById("error").textContent = error
   });
 });
 
@@ -89,6 +89,8 @@ registerButton.addEventListener("click", function () {
   const name = registerName.value;
   const email = registerEmail.value;
   const password = registerPassword.value;
+  let class_id_str = classesList.value;
+  let class_id = null;
 
   if (!role) {
     document.getElementById("error").textContent = "Выберите роль";
@@ -99,6 +101,12 @@ registerButton.addEventListener("click", function () {
     document.getElementById("error").textContent = "Выбери класс";
   };
 
+  if (role = 'student') {
+    class_id = Number(class_id_str);
+  };
+
+  console.log(class_id, typeof class_id);
+
   fetch("http://localhost:8000/auth/register", {
     method: "POST",
     headers: {
@@ -108,7 +116,8 @@ registerButton.addEventListener("click", function () {
       name: name,
       email: email,
       password: password,
-      role: role
+      role: role,
+      class_id: class_id
     })
   })
   .then(response => {
@@ -128,12 +137,31 @@ registerButton.addEventListener("click", function () {
     .then(response => {
       if (!response.ok) {
         throw new Error("Ошибка в процессе логина");
-      }
+      };
       return response.json();
     })
     .then(data => {
-      localStorage.setItem("access_token", data.access_token);
-      window.location.href = "/dashboard.html";
+      const token = data.access_token;
+      localStorage.setItem("token", token);
+
+      return fetch("http://localhost:8000/users/me", {
+        headers: {
+          "Authorization": "Bearer " + token
+        }
+      });
+    })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error("Ошибка в процессе логина");
+      };
+      return response.json();
+    })
+    .then(user => {
+      if (user.role == 'teacher') {
+        window.location.href = "/choose_class.html";
+      } else {
+        window.location.href = "/dashboard.html";
+      };
     })
     .catch(error => {
       document.getElementById("error").textContent = "Неверный логин или пароль"

@@ -78,7 +78,7 @@ loginButton.addEventListener("click", function () {
   })
   .then(data => {
     localStorage.setItem("access_token", data.access_token);
-    window.location.href = "/dashboard.html";
+    window.location.href = "../dashboard.html";
   })
   .catch(error => {
     document.getElementById("error").textContent = error
@@ -158,9 +158,9 @@ registerButton.addEventListener("click", function () {
     })
     .then(user => {
       if (user.role == 'teacher') {
-        window.location.href = "/choose_class.html";
+        window.location.href = "../choose_class.html";
       } else {
-        window.location.href = "/dashboard.html";
+        window.location.href = "../dashboard.html";
       };
     })
     .catch(error => {

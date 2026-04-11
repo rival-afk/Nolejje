@@ -1,5 +1,5 @@
 const classesList = document.getElementById("classes-list");
-const token = localStorage.getItem(access_token);
+const token = localStorage.getItem("access_token");
 const classes = fetch("/api/classes")
 .then(response => {
   if (!response.ok) {

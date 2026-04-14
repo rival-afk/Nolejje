@@ -5,4 +5,5 @@ async function init() {
 
 init();
 
-
+const userName = document.getElementById("user-name");
+userName.append(user["name"]);

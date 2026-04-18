@@ -269,6 +269,13 @@ async def get_classes():
     
     return [dict(row) for row in classes_list]
 
+@app.get("/auth/refresh")
+async def refresh_token(current_user = Depends(get_user)):
+    new_token = create_access_token(
+        {"user_id": current_user["id"]}
+    )
+    return {"new_token": new_token}
+
 # <! POST-запросы!> #
 
 @app.post("/auth/register")
@@ -481,13 +488,6 @@ async def post_get_class(class_id: int, current_user = Depends(get_user)):
         current_user["id"])
     
     return {"status": "Successful"}
-
-@app.post("/auth/refresh")
-async def refresh_token(current_user = Depends(get_user)):
-    new_token = create_access_token(
-        {"user_id": current_user["id"]}
-    )
-    return {"new_token": new_token}
 
 # <! Error Handlers !> #        my English is very well)
 

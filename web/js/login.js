@@ -16,7 +16,7 @@ const classes = fetch("/api/classes")
     option.value = item.id;
     option.textContent = item.name + " " + item.class;
     classesList.appendChild(option);
-  })
+  });
 });
 let role = null;
 let classId = null;
@@ -30,9 +30,9 @@ const loginButton = document.getElementById("login-button");
 const registerButton = document.getElementById("register-button");
 
 //кнопки ролей
-const roleStudentButton = document.getElementById("student") 
-const roleTeacherButton = document.getElementById("teacher")
-const roleAdminButton = document.getElementById("admin")
+const roleStudentButton = document.getElementById("student");
+const roleTeacherButton = document.getElementById("teacher");
+const roleAdminButton = document.getElementById("admin");
 
 roleAdminButton.addEventListener("click", function () {
   role = 'admin';
@@ -43,7 +43,7 @@ roleStudentButton.addEventListener("click", function () {
 });
 
 roleTeacherButton.addEventListener("click", function () {
-  role = 'teacher'
+  role = 'teacher';
 });
 
 loginTab.addEventListener("click", function () {
@@ -81,7 +81,7 @@ loginButton.addEventListener("click", function () {
     window.location.href = "/dashboard";
   })
   .catch(error => {
-    document.getElementById("error").textContent = error
+    document.getElementById("error").textContent = error;
   });
 });
 
@@ -120,7 +120,7 @@ registerButton.addEventListener("click", function () {
   })
   .then(response => {
     if (!response.ok) {
-      throw new OverconstrainedError("Ошибка в процессе регистрации")
+      throw new OverconstrainedError("Ошибка в процессе регистрации");
     }
     return fetch("/api/auth/login", {
       method: "POST",
@@ -162,7 +162,7 @@ registerButton.addEventListener("click", function () {
       };
     })
     .catch(error => {
-      document.getElementById("error").textContent = "Неверный логин или пароль"
+      document.getElementById("error").textContent = "Неверный логин или пароль";
     });
   });
 });

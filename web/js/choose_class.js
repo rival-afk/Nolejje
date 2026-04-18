@@ -14,14 +14,14 @@ const classes = fetch("/api/classes")
     option.value = item.id;
     option.textContent = item.name + " " + item.class;
     classesList.appendChild(option);
-  })
+  });
 });
 const selectBtn = document.getElementById("select-class");
 
 selectBtn.addEventListener("click", function () {
   const class_id = Number(classesList.value);
 
-  fetch("/api/select_class"), {
+  fetch("/api/select_class", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -34,7 +34,7 @@ selectBtn.addEventListener("click", function () {
       if (!response.ok) {
         document.getElementById("error").textContent = "Ошибка при получении классов";
     throw new Error("Ошибка при получении классов");
-      }
+      };
     })
-  }
+  });
 });

@@ -1,9 +1,15 @@
+let user = null;
 async function init() {
-  const user = await checkAuth();
+  user = await checkAuth();
   return user;
 };
 
-init();
+await init().then(() => {
 
 const userName = document.getElementById("user-name");
-userName.append(user["name"]);
+userName.textContent = user["name"];
+
+const userRole = document.getElementById("user-role");
+userRole.textContent = user["role"];
+
+});

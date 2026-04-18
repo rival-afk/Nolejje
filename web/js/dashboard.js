@@ -12,6 +12,15 @@ userName.textContent = user["name"];
 const userRole = document.getElementById("user-role");
 userRole.textContent = user["role"];
 
+if (user.role == "student") {
+  getHomeworks();
+} else if (user.role == "teacher") {
+  document.body.innerHTML = "<h1>Вы учитель</h1>";
+} else if (user.role == "admin") {
+  document.body.innerHTML = "<h1>Вы админ</h1>";
+} else {
+  throw new Error("Неизвестная роль")
+}
 });
 
 const homework = document.getElementById("homework");
@@ -37,5 +46,3 @@ async function getHomeworks() {
 
   homework.textContent = JSON.stringify(data, null, 2);
 };
-
-getHomeworks();

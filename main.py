@@ -128,10 +128,10 @@ async def get_homeworks (limit: Optional[int] = None, offset: Optional[int] = No
         params = [student["class_id"]]
         
         order = " ORDER BY h.due_date ASC"
-        only_active_query = f" AND h.due_date >= CURRENT_DATE"
+        only_active_query = " AND h.due_date >= CURRENT_DATE"
         
         request = """
-            SELECT h.id, h.title, h.due_date, su.name as subject_name FROM students st
+            SELECT h.id, h.description, h.title, h.due_date, su.name as subject_name FROM students st
             JOIN classes c ON st.class_id = c.id
             JOIN subjects su ON c.id = su.class_id
             JOIN homeworks h ON h.subject_id = su.id

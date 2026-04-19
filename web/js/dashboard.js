@@ -41,8 +41,27 @@ async function getHomeworks() {
   const data = await response.json();
 
   if (data.length == 0) {
-    homework.textContent = "Нет домашних заданий!"
-  };
+    homework.textContent = "Нет домашних заданий!";
+  } else if (data.length != 0) {
+    data.forEach(hw => {
+      const item = document.createElement("div");
+      const title = document.createElement("p");
+      const desc = document.createElement("p");
+      const subjName = document.createElement("h2");
+      const date = document.createElement("p");
 
-  homework.textContent = JSON.stringify(data, null, 2);
+      title.textContent = hw.title;
+      desc.textContent = hw.description;
+      subjName.textContent = hw.subject_name;
+      
+      const d = new Date(hw.due_date);
+      date.textContent = d.getDate() + "." + (d.getMonth() + 1) + "." + d.getFullYear();
+      
+      item.appendChild(title);
+      item.appendChild(desc);
+      item.appendChild(subjName);
+      item.appendChild(date);
+      homework.appendChild(item);
+    });
+  };
 };

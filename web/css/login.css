@@ -21,15 +21,18 @@ body {
   padding: 0 20px 0 20px;
   outline: 3px solid #333333;
   border-radius: 25px;
+  gap: 15px;
 }
 
 .h1 {
   font-family: 'Unbounded';
-  font-size: 35px;
+  font-size: 40px;
   font-weight: 400;
   color: #ffffff;
-  margin-bottom: 20px;
   text-align: center;
+  max-height: 40px;
+  margin-bottom: 30px;
+  margin-top: 20px;
 }
 
 .inputs {
@@ -57,6 +60,8 @@ body {
   background-color: #ffffff;
   align-items: center;
   height: 30px;
+  cursor: pointer;
+  border-radius: 25px;
 }
 
 .role_tabs {
@@ -79,4 +84,54 @@ body {
 
 #register {
   display: none;
+}
+
+#tabs {
+  display: flex;
+  position: relative;
+  border-radius: 50px;
+  min-height: 75px;
+  background-color: #2a2a2a;
+  outline: solid 3px #333333;
+  margin-top: 20px;
+  margin-bottom: 0px;
+}
+
+.tab-bg {
+  position: absolute;
+  width: 50%;
+  height: 100%;
+  background-color: #333333;
+  outline: solid 3px #797979;
+  border-radius: 50px;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tab {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: #aaa;
+  z-index: 2;
+  cursor: pointer;
+  height: 75px;
+  border-radius: 75px;
+  transition: color 0.3s;
+  max-width: 50%;
+  font-size: 25px;
+  font-family: 'Unbounded';
+}
+
+.tab.active {
+  color: #ffffff;
+  z-index: 3;
+  max-width: 50%;
+  background: transparent;
+  border: none;
+  height: 75px;
+  border-radius: 75px;
+  width: 50%;
+  font-size: 25px;
+  font-family: 'Unbounded';
+  transform: scale(0.97);
 }

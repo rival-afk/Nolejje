@@ -49,11 +49,21 @@ roleTeacherButton.addEventListener("click", function () {
 loginTab.addEventListener("click", function () {
   login.style.display = "block";
   register.style.display = "none";
+  loginTab.classList.add("active");
+  registerTab.classList.remove("active");
+
+  const bg = document.querySelector(".tab-bg");
+  bg.style.transform = "translateX(0%)";
 });
 
 registerTab.addEventListener("click", function () {
   login.style.display = "none";
   register.style.display = "block";
+  loginTab.classList.remove("active");
+  registerTab.classList.add("active");
+
+  const bg = document.querySelector(".tab-bg");
+  bg.style.transform = "translateX(100%)";
 });
 
 loginButton.addEventListener("click", function () {

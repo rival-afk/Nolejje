@@ -7,15 +7,23 @@ const register = document.getElementById("register");
 const registerName = document.getElementById("register-name");
 const registerEmail = document.getElementById("register-email");
 const registerPassword = document.getElementById("register-password");
-const classesList = document.getElementById("class-select");
+const classesList = document.getElementById("select-options");
+const selectTitle = document.getElementById("select-title")
 const classes = fetch("/api/classes")
 .then(response => response.json())
 .then(data => {
   data.forEach(item => {
-    const option = document.createElement("option");
-    option.value = item.id;
+    const option = document.createElement("div");
+    option.classList.add("option");
+    option.dataset.id = item.id;
     option.textContent = item.name + " " + item.class;
     classesList.appendChild(option);
+
+    option.addEventListener("click", function () {
+      classId = option.dataset.id;
+      selectTitle.textContent = option.textContent;
+    });
+
   });
 });
 let role = null;
@@ -35,15 +43,15 @@ const roleTeacherButton = document.getElementById("teacher");
 const roleAdminButton = document.getElementById("admin");
 
 roleAdminButton.addEventListener("click", function () {
-  role = 'admin';
+  role == 'admin';
 });
 
 roleStudentButton.addEventListener("click", function () {
-  role = 'student';
+  role == 'student';
 });
 
 roleTeacherButton.addEventListener("click", function () {
-  role = 'teacher';
+  role == 'teacher';
 });
 
 function changeContainerSize() {
@@ -123,8 +131,6 @@ registerButton.addEventListener("click", function () {
   const name = registerName.value;
   const email = registerEmail.value;
   const password = registerPassword.value;
-  let class_id_str = classesList.value;
-  let class_id = null;
 
   if (!role) {
     document.getElementById("error").textContent = "Выберите роль";

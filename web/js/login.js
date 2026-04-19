@@ -46,6 +46,16 @@ roleTeacherButton.addEventListener("click", function () {
   role = 'teacher';
 });
 
+function changeContainerSize() {
+  const container = document.querySelector("#container");
+  const visibleForm = document.querySelector(".form.visible");
+
+  if (visibleForm) {
+    const height = visibleForm.offsetHeight;
+    container.style.minHeight = height + "px";
+  };
+}
+
 loginTab.addEventListener("click", function () {
   login.classList.add("visible");
   login.classList.remove("hidden");
@@ -57,6 +67,8 @@ loginTab.addEventListener("click", function () {
 
   const bg = document.querySelector(".tab-bg");
   bg.style.transform = "translateX(0%)";
+
+  changeContainerSize();
 });
 
 registerTab.addEventListener("click", function () {
@@ -70,6 +82,8 @@ registerTab.addEventListener("click", function () {
 
   const bg = document.querySelector(".tab-bg");
   bg.style.transform = "translateX(100%)";
+
+  changeContainerSize();
 });
 
 loginButton.addEventListener("click", function () {

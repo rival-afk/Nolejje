@@ -54,7 +54,10 @@ function changeContainerSize() {
     const height = visibleForm.offsetHeight;
     container.style.minHeight = height + "px";
   };
-}
+};
+
+window.addEventListener("load", changeContainerSize);
+window.addEventListener("resize", changeContainerSize);
 
 loginTab.addEventListener("click", function () {
   login.classList.add("visible");
@@ -112,6 +115,7 @@ loginButton.addEventListener("click", function () {
   })
   .catch(error => {
     document.getElementById("error").textContent = error;
+    document.getElementById("error").style.display = "block";
   });
 });
 
@@ -124,11 +128,13 @@ registerButton.addEventListener("click", function () {
 
   if (!role) {
     document.getElementById("error").textContent = "Выберите роль";
+    document.getElementById("error").style.display = "block";
     return;
   };
 
   if (!classId) {
     document.getElementById("error").textContent = "Выбери класс";
+    document.getElementById("error").style.display = "block";
   };
 
   if (role = 'student') {
@@ -193,6 +199,7 @@ registerButton.addEventListener("click", function () {
     })
     .catch(error => {
       document.getElementById("error").textContent = "Неверный логин или пароль";
+      document.getElementById("error").style.display = "block";
     });
   });
 });

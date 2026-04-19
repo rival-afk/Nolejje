@@ -22,6 +22,7 @@ body {
   outline: 3px solid #333333;
   border-radius: 25px;
   gap: 15px;
+  transition: transform 0.3s ease;
 }
 
 .h1 {
@@ -54,14 +55,35 @@ body {
 }
 
 .button {
-  margin-top: 60px;
-  margin-bottom: 20px;
+  font-family: 'Unbounded';
+  font-size: 25px;
+  margin-top: 20px;
+  margin-bottom: 15px;
   color: #1e1e1e;
-  background-color: #ffffff;
+  background-color: #e1e1e1;
   align-items: center;
-  height: 30px;
-  cursor: pointer;
-  border-radius: 25px;
+  min-height: 30px;
+  height: 60px;
+  width: 70%;
+  margin-left: 15%;
+  border-radius: 20px;
+  border: none;
+  outline: solid 3px #333333;
+  transition: outline-color 0.3s ease, background-color 0.3s ease, color 0.3s ease, transform 0.3s ease;
+}
+
+.button:hover {
+  background-color: #ffffff;
+  color: #333333;
+  transform: scale(1.03);
+  outline-color: #5c5c5c;
+}
+
+.button:active {
+  transform: scale(0.97);
+  color: #2a2a2a;
+  background-color: #a0a0a0;
+  outline-color: #333333;
 }
 
 .role_tabs {
@@ -73,13 +95,45 @@ body {
   font-size: 15px;
   font-family: 'Unbounded';
   border: none;
-  background-color: #ffffff;
+  background-color: #e1e1e1;
   outline: 3px solid #333333;
   color: #2a2a2a;
   border-radius: 10px;
   height: 40px;
   width: 100vw;
   text-align: center;
+  transition: outline-color 0.3s ease, background-color 0.3s ease, color 0.3s ease, transform 0.3s ease;
+}
+
+.role_tab:hover {
+  background-color: #ffffff;
+  color: #333333;
+  transform: scale(1.03);
+  outline-color: #5c5c5c;
+}
+
+.role_tab:active {
+  transform: scale(0.97);
+  color: #2a2a2a;
+  background-color: #a0a0a0;
+  outline-color: #333333;
+}
+
+#error {
+  display: none;
+  font-family: "JetBrains Mono", monospace;
+  text-align: center;
+  height: 40px;
+  outline: solid 2px #ff7070;
+  border-radius: 10px;
+  margin-bottom: 15px;
+  background-color: #ff000026;
+  color: #ffffff;
+  line-height: 40px;
+}
+
+#class-select {
+
 }
 
 #tabs {

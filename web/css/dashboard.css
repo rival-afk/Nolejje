@@ -1,7 +1,13 @@
 body {
-  background-color: #1e1e1e;
+  background-color: #2a2a2a;
+  min-height: 100vh;
+  min-width: 100vw;
+  overflow: hidden;
 }
 
 #header {
   background-color: #2a2a2a;
+  max-height: 50px;
+  min-width: 100%;
+  left: 0;
 }

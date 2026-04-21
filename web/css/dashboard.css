@@ -2,12 +2,45 @@ body {
   background-color: #2a2a2a;
   min-height: 100vh;
   min-width: 100vw;
-  overflow: hidden;
+  overflow-x: hidden;
+  display: flex;
+  margin: 0;
+  flex-direction: column;
 }
 
 #header {
-  background-color: #2a2a2a;
+  background-color: #ff0000;
+  display: flex;
   max-height: 50px;
   min-width: 100%;
-  left: 0;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 10px;
+  margin-bottom: 10px;
+}
+
+#header img {
+  width: auto;
+  height: 50px;
+  object-fit: contain;
+}
+
+#header nav {
+  font-family: 'JetBrains Mono';
+  margin-right: 20px;
+}
+
+#header a {
+  color: #ffffff;
+  text-decoration: none;
+}
+
+#user-name {
+  color: #e1e1e1;
+  font-family: "Unbounded";
+  font-weight: 800;
+  font-size: 100px;
+  background-color: #ff0000;
+  margin-top: 20px;
+  margin-bottom: 0;
 }

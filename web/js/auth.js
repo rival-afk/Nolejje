@@ -57,6 +57,10 @@ async function refreshToken() {
       throw new Error(e);
     });
 
+    if (data == null) {
+      throw new Error("data is null");
+    };
+
     if (data.detail == "Expired Token") {
       window.location.href = "/login";
       throw new Error("Токен истек. Редирект...")

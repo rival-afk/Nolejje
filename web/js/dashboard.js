@@ -7,33 +7,28 @@ async function init() {
 init().then(() => {
 
 const userName = document.getElementById("user-name");
-userName.textContent = user["name"];
+userName.textContent = user["name"].toUpperCase();
 
-const userRole = document.getElementById("user-role");
-userRole.textContent = user["role"];
-
-let userIcon = user["name"].split(" ");
-if (userIcon.length == 1) {
-  userIcon = userIcon[0].charAt(0).toUpperCase();
-} else {
-  userIcon = userIcon[0].charAt(0).toUpperCase() + userIcon[1].charAt(1).toUpperCase();
-}
-
-if (user.role == "student") {
-  getHomeworks();
-} else if (user.role == "teacher") {
-  document.body.innerHTML = "<h1>Вы учитель</h1>";
-} else if (user.role == "admin") {
-  document.body.innerHTML = "<h1>Вы админ</h1>";
-} else {
-  throw new Error("Неизвестная роль")
-}
-});
-
+const token = localStorage.getItem("access_token");
 const homework = document.getElementById("homework");
 
+const userClass = document.getElementById("user-class");
+const studentData = fetch("/api/students/me", {
+  method: "GET",
+  headers: {
+    "Authorization": "Bearer " + token
+  }
+}).then(response => {
+  if (!response.ok) {
+    throw new Error("Получение класса упало с ошибкой");
+  };
+
+  return response.json()
+}).then(data => {
+  userClass.textContent = data["class"] + " класс · " + data["school_name"];
+});
+
 async function getHomeworks() {
-  const token = localStorage.getItem("access_token");
   const response = await fetch("/api/students/me/homeworks", {
     method: "GET",
     headers: {
@@ -73,3 +68,13 @@ async function getHomeworks() {
   };
 };
 
+if (user.role == "student") {
+  getHomeworks();
+} else if (user.role == "teacher") {
+  document.body.innerHTML = "<h1>Вы учитель</h1>";
+} else if (user.role == "admin") {
+  document.body.innerHTML = "<h1>Вы админ</h1>";
+} else {
+  throw new Error("Неизвестная роль")
+};
+});

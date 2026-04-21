@@ -33,15 +33,9 @@ app.add_middleware(
 
 # <! Functions !> #         (для функций не связанных с эндпоинтами)
 
-async def get_current_student(current_user=Depends(get_user)):
+async def get_current_student_func(current_user=Depends(get_user)):
     async with db.pool.acquire() as conn:
         student = await conn.fetchrow("SELECT * FROM students WHERE user_id=$1", current_user["id"])
-        
-        if student == None:
-            raise HTTPException(
-                status_code=404,
-                detail="Student Not Found"
-            )
         
         if not student:
             raise HTTPException(status_code=404, detail="Мы перерыли всю бд, но так его и не нашли :(")
@@ -109,13 +103,21 @@ async def get_current_user(current_user = Depends(get_user)):
     return current_user
 
 @app.get("/students/me")
-async def get_current_student(student = Depends(get_current_student)):
+async def get_current_student(student = Depends(get_current_student_func)):
     student_id = student["id"]
     class_id = student["class_id"]
-    return {"student_id": student_id, "class_id": class_id}
+    async with db.pool.acquire() as conn:
+        student_data = await conn.fetchrow("""
+        SELECT classes.number || ' ' || classes.letter AS class, schools.name AS school_name FROM students
+        JOIN classes ON students.class_id = classes.id
+        JOIN schools ON classes.school_id = schools.id
+        WHERE students.id = $1
+        """,
+        student["id"])
+    return {"student_id": student_id, "class_id": class_id, "class": student_data["class"], "school_name": student_data["school_name"]}
 
 @app.get("/students/me/homeworks")
-async def get_homeworks (limit: Optional[int] = None, offset: Optional[int] = None, only_active: Optional[bool] = None, student = Depends(get_current_student)):
+async def get_homeworks (limit: Optional[int] = None, offset: Optional[int] = None, only_active: Optional[bool] = None, student = Depends(get_current_student_func)):
     
     async with db.pool.acquire() as conn:
         

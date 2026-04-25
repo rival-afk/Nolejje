@@ -8,32 +8,45 @@ body {
   flex-direction: column;
 }
 
-#header {
+
+.a1,.a2{position:fixed;border-radius:50%;filter:blur(130px);pointer-events:none;z-index:0;}
+.a1{width:600px;height:600px;background:radial-gradient(circle,rgba(255,51,85,.13) 0%,transparent 70%);top:-200px;right:-150px;}
+.a2{width:400px;height:400px;background:radial-gradient(circle,rgba(255,51,85,.07) 0%,transparent 70%);bottom:-100px;left:-100px;}
+
+.header {
   background-color: #0e0e0e;
   display: flex;
   max-height: 50px;
+  min-height: 50px;
   min-width: 100%;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 20px;
+  padding: 0;
   margin-bottom: 10px;
-  border-bottom: solid 2px #222222;
+  border-bottom: solid 2px rgba(255,255,255,0.5);
   user-select: none;
 }
 
-#header img {
+.header img {
+  margin: 20px;
   width: auto;
   height: 25px;
   object-fit: contain;
 }
 
-#header nav {
+#icon {
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+
+.header nav {
   font-family: 'JetBrains Mono';
   margin-right: 40px;
   user-select: none;
 }
 
-#header nav a {
+.header nav a {
   color: #666666;
   text-decoration: none;
   transition: color 0.3s;
@@ -42,7 +55,7 @@ body {
   margin-left: 20px;
 }
 
-#header a:hover, #header a:active {
+.header a:hover, #header a:active {
   color: #f0f0f0;
 }
 
@@ -72,4 +85,42 @@ body {
   color: #ff3355;
   margin-left: 15px;
   padding-top: 100px;
+}
+
+.card {
+  background-color: #161616;
+  outline: solid 2px #222222;
+  border-radius: 15px;
+  padding: 20px 20px;
+}
+
+.hw-card {
+  margin-bottom: 8px;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.hw-card-subjname {
+  font-family: 'JetBrains Mono';
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #ff3355;
+  margin-bottom: 4px;
+}
+
+.hw-card-title {
+  font-family: 'JetBrains Mono';
+  font-size: 14px;
+  font-weight: 500;
+  color: #f0f0f0;
+  margin-bottom: 4px;
+}
+
+.hw-card-date {
+  font-family: 'JetBrains Mono';
+  font-size: 11px;
+  color: #666666;
 }

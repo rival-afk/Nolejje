@@ -47,10 +47,15 @@ async function getHomeworks() {
   } else if (data.length != 0) {
     data.forEach(hw => {
       const item = document.createElement("div");
+      item.classList.add("hw-card", "card");
       const title = document.createElement("p");
+      title.classList.add("hw-card-title");
       const desc = document.createElement("p");
+      desc.classList.add("hw-card-desc");
       const subjName = document.createElement("h2");
+      subjName.classList.add("hw-card-subjname");
       const date = document.createElement("p");
+      date.classList.add("hw-card-date");
 
       title.textContent = hw.title;
       desc.textContent = hw.description;

@@ -52,3 +52,9 @@ body {
 .header a:hover, #header a:active {
   color: #f0f0f0;
 }
+
+.title {
+  background: linear-gradient(90deg, #ff3355, #ff6677);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}

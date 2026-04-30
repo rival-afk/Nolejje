@@ -131,9 +131,9 @@ registerButton.addEventListener("click", function () {
     return;
   };
 
-  if (!classId || classId == undefined) {
-    document.getElementById("error").textContent = "Выбери класс";
-    document.getElementById("error").style.display = "block";
+  if (role === "student" && !classId) {
+    showError("Выбери класс");
+    return;
   };
 
   fetch("/api/auth/register", {
@@ -146,7 +146,7 @@ registerButton.addEventListener("click", function () {
       email: email,
       password: password,
       role: role,
-      class_id: class_id
+      class_id: classId
     })
   })
   .then(response => {
@@ -185,16 +185,11 @@ registerButton.addEventListener("click", function () {
       };
       return response.json();
     })
-    .then(user => {
-      if (user.role == 'teacher') {
-        window.location.href = "/choose_class";
-      } else {
-        window.location.href = "/dashboard";
-      };
-    })
     .catch(error => {
       document.getElementById("error").textContent = "Неверный логин или пароль";
       document.getElementById("error").style.display = "block";
     });
   });
+window.location.href = "/dashboard";
 });
+

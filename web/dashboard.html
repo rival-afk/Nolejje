@@ -23,12 +23,49 @@
       <a class="header-nav-a" href="developer">Разработчик</a>
     </nav>
   </header>
-  <div id="user-info">
-    <h1 id="user-name"></h1>
-    <span id="user-class"></span>
+  <div id="student-dashboard">
+    <div id="user-info">
+      <h1 id="user-name"></h1>
+      <span id="user-class"></span>
+    </div>
+    <span class="red-title">Домашние Задания</span>
+    <div id="homework"></div>
   </div>
-  <span class="red-title">Домашние Задания</span>
-  <div id="homework"></div>
+  <div id="teacher-dashboard" style="display: none;">
+    <div class="dashboard">
+      <div class="sidebar">
+        <h2>Классы</h2>
+        <div id="class-list" class="class-list"></div>
+      </div>
+      <div class="main">
+        <div class="main-header">
+          <h1 id="class-title">Выберите класс</h1>
+        </div>
+        <div id="students"></div>
+        <div class="panel">
+          <h2 class="h2">Добавить задание</h2>
+          <input id="hw-title" placeholder="Название">
+          <input id="hw-desc" placeholder="Описание">
+          <button id="add-hw">Добавить</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="admin-dashboard">
+    <div class="admin-layout">
+      <aside class="admin-sidebar">
+        <div class="logo">Nolejje</div>
+        <nav>
+          <div class="nav-item active" data-page="assign">Назначения</div>
+          <div class="nav-item" data-page="classes">Классы</div>
+          <div class="nav-item" data-page="teachers">Учителя</div>
+          <div class="nav-item" data-page="analytics">Аналитика</div>
+          <div class="nav-item" data-page="reports">Жалобы</div>
+        </nav>
+      </aside>
+      <main class="admin-main" id="admin-content"></main>
+    </div>
+  </div>
 </body>
 <script src="js/auth.js"></script>
 <script src="js/dashboard.js"></script>

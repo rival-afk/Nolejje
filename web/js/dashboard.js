@@ -13,22 +13,39 @@ const token = localStorage.getItem("access_token");
 const homework = document.getElementById("homework");
 
 const userClass = document.getElementById("user-class");
-const studentData = fetch("/api/students/me", {
-  method: "GET",
-  headers: {
-    "Authorization": "Bearer " + token
-  }
-}).then(response => {
-  if (!response.ok) {
-    throw new Error("Получение класса упало с ошибкой");
-  };
+let studentData = null;
+let activeClassId = null;
 
-  return response.json()
-}).then(data => {
-  userClass.textContent = data["class"] + " класс · " + data["school_name"];
-});
+if (user.role == "student") {
+  document.getElementById("student-dashboard").style.display = "block";
+  document.getElementById("teacher-dashboard").style.display = "none";
+  studentData = fetch("/api/students/me", {
+    method: "GET",
+    headers: {
+      "Authorization": "Bearer " + token
+    }
+  }).then(response => {
+    if (!response.ok) {
+      throw new Error("Получение класса упало с ошибкой");
+    };
+    return response.json()
+  }).then(data => {
+    userClass.textContent = data["class"] + " класс · " + data["school_name"];
+  });
+  initStudent();
+  showDashboard();
+} else if (user.role == "teacher") {
+  document.getElementById("student-dashboard").style.display = "none";
+  document.getElementById("teacher-dashboard").style.display = "block";
+  initTeacher();
+  showDashboard();
+} else if (user.role == "admin") {
+  showDashboard();
+} else {
+  throw new Error("Неизвестная роль")
+};
 
-async function getHomeworks() {
+async function initStudent() {
   const response = await fetch("/api/students/me/homeworks", {
     method: "GET",
     headers: {
@@ -73,13 +90,71 @@ async function getHomeworks() {
   };
 };
 
-if (user.role == "student") {
-  getHomeworks();
-} else if (user.role == "teacher") {
-  document.body.innerHTML = "<h1>Вы учитель</h1>";
-} else if (user.role == "admin") {
-  document.body.innerHTML = "<h1>Вы админ</h1>";
-} else {
-  throw new Error("Неизвестная роль")
+function initTeacher() {
+  loadClasses();
+};
+
+function loadClasses() {
+  fetch("/api/teacher/classes", {
+    headers: {
+      "Authorization": "Bearer " + localStorage.getItem("access_token")
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    const list = document.getElementById("class-list");
+    list.innerHTML = "";
+
+    if (data.length == 0) {
+      const div = document.createElement("div");
+      div.textContent = "Нет классов";
+      div.classList.add("text");
+      list.appendChild(div);
+    } else {
+      data.forEach(teacherClass => {
+        const div = document.createElement("div");
+        div.classList.add("class-item");
+
+        div.innerHTML = `
+          <div>${teacherClass.name}</div>
+          <div style="font-size:11px; color:#777;">
+            ${teacherClass.students_count} учеников
+          </div>
+        `;
+
+        div.addEventListener("click", () => {
+          activeClassId = teacherClass.id;
+
+          document.querySelectorAll(".class-item").forEach(el => {
+            el.classList.remove("active");
+          });
+
+          div.classList.add("active");
+
+          loadStudents(teacherClass.id);
+        });
+
+        list.appendChild(div);
+      });
+    };
+  });
+};
+
+function showDashboard(role) {
+  document.getElementById("student-dashboard").style.display = "none";
+  document.getElementById("teacher-dashboard").style.display = "none";
+  document.getElementById("admin-dashboard").style.display = "none";
+
+  if (role === "student") {
+    document.getElementById("student-dashboard").style.display = "block";
+  }
+
+  if (role === "teacher") {
+    document.getElementById("teacher-dashboard").style.display = "block";
+  }
+
+  if (role === "admin") {
+    document.getElementById("admin-dashboard").style.display = "block";
+  }
 };
 });

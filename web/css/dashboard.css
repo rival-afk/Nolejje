@@ -10,7 +10,7 @@ body {
 
 
 .a1,.a2{position:fixed;border-radius:50%;filter:blur(130px);pointer-events:none;z-index:0;}
-.a1{width:600px;height:600px;background:radial-gradient(circle,rgba(255,51,85,.13) 0%,transparent 70%);top:-200px;right:-150px;}
+.a1{width:1000px;height:1000px;background:radial-gradient(circle,rgba(255,51,85,.13) 0%,transparent 70%);top:-400px;right:-400px;}
 .a2{width:400px;height:400px;background:radial-gradient(circle,rgba(255,51,85,.07) 0%,transparent 70%);bottom:-100px;left:-100px;}
 
 .header {
@@ -123,4 +123,118 @@ body {
   font-family: 'JetBrains Mono';
   font-size: 11px;
   color: #666666;
+}
+
+.dashboard {
+  display: flex;
+  gap: 20px;
+  padding: 20px;
+  z-index: 1;
+}
+
+.sidebar {
+  width: 260px;
+  padding: 16px;
+  border-radius: 16px;
+  background: rgba(255,255,255,0.04);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.sidebar h2 {
+  font-family: 'JetBrains Mono';
+  font-size: 14px;
+  color: #888;
+  margin-bottom: 12px;
+}
+
+.class-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.class-item {
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid transparent;
+
+  font-family: 'JetBrains Mono';
+  color: #ccc;
+
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.class-item:hover {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.1);
+  transform: translateX(4px);
+}
+
+.class-item.active {
+  background: rgba(255,51,85,0.1);
+  border-color: rgba(255,51,85,0.4);
+  color: #fff;
+}
+
+.main {
+  flex: 1;
+  padding: 20px;
+  border-radius: 16px;
+  background: rgba(255,255,255,0.03);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.main-header {
+  font-family: 'Unbounded';
+  font-weight: 600;
+  font-size: 35px;
+}
+
+.h2 {
+  font-family: 'Unbounded';
+  font-weight: 400;
+  font-size: 25px;
+}
+
+.text {
+  font-family: 'JetBrains Mono';
+  font-weight: 400;
+  color: #f0f0f0;
+}
+
+.admin-layout {
+  display: flex;
+  height: 100vh;
+}
+
+.admin-sidebar {
+  width: 240px;
+  padding: 20px;
+
+  background: rgba(255,255,255,0.03);
+  backdrop-filter: blur(12px);
+  border-right: 1px solid rgba(255,255,255,0.08);
+}
+
+.nav-item {
+  padding: 12px;
+  border-radius: 10px;
+  margin-bottom: 6px;
+  cursor: pointer;
+  color: #aaa;
+  transition: all 0.2s;
+}
+
+.nav-item:hover {
+  background: rgba(255,255,255,0.06);
+  color: white;
+}
+
+.nav-item.active {
+  background: rgba(255,51,85,0.15);
+  color: white;
 }

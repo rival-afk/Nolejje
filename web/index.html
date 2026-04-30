@@ -11,16 +11,38 @@
   <title>Главная</title>
 </head>
 <body>
+<div class="root">
   <header class="header">
     <a href="#">
       <img src="img/nolejje_dark.png" alt="Логотип Nolejje">
     </a>
     <nav id="header-nav">
       <a class="header-nav-a" href="#">Главная</a>
-      <a class="header-nav-a" href="#">Возможности</a>
+      <a class="header-nav-a" href="dashboard">Дэшборд</a>
       <a class="header-nav-a" href="developer">Разработчик</a>
     </nav>
+    <nav id="user-info-nav">
+      <a class="user-info-nav-a" href="login">Войти</a>
+      <a class="user-info-nav-a" href="login">Зарегистрироваться</a>
+    </nav>
   </header>
+  <main class="main">
+    <div class="hero">
+      <h1 class="red-title">Nolejje</h1>
+      <p class="white-p"> - продуктивная учёба начинается здесь</p>
+      <button class="accent-button">Начать</button>
+      <button class="secondary-button">Возможности</button>
+    </div>
+    <div class="line">
+      <nav id="first-line">
+        <a class="first-line-a">ПРОГРЕСС</a>
+        <a class="first-line-a">РАСПИСАНИЕ</a>
+        <a class="first-line-a">ДЕДЛАЙНЫ</a>
+        <a class="first-line-a">УЧЁБА</a>
+      </nav>
+    </div>
+  </main>
+</div>
 </body>
 <script src="js/index.js"></script>
 </html>

@@ -276,6 +276,34 @@ async def refresh_token(current_user = Depends(get_user_func)):
     )
     return {"new_token": new_token}
 
+@app.get("/teacher/classes")
+async def get_teacher_classes(current_user = Depends(get_user_func)):
+    
+    if current_user["role"] != "teacher":
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden. You aren\'t a teacher"
+        )
+    
+    async with db.pool.acquire() as conn:
+        teacher_id = await conn.fetchrow("""
+            SELECT id FROM teachers WHERE user_id =$1
+            """, current_user["id"])
+        
+        if not teacher_id:
+            raise HTTPException(status_code=404, detail="Учитель не найден в базе")
+        
+        classes = await conn.fetch("""
+            SELECT classes.id, classes.number || classes.letter AS name, schools.name AS school_name, COUNT(students.id) AS students_count FROM classes
+            JOIN schools ON classes.school_id = classes.id
+            JOIN subjects ON subjects.class_id = classes.id
+            LEFT JOIN students ON students.class_id = classes.id
+            WHERE subjects.teacher_id = $1
+            GROUP BY classes.id, classes.number, classes.letter, schools.name
+            """, teacher_id["id"])
+        
+    return [dict(row) for row in classes]
+
 # <! POST-запросы!> #
 
 @app.post("/auth/register")

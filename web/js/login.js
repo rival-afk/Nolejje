@@ -171,7 +171,7 @@ registerButton.addEventListener("click", function () {
     })
     .then(data => {
       const token = data.access_token;
-      localStorage.setItem("token", token);
+      localStorage.setItem("access_token", token);
 
       return fetch("/api/users/me", {
         headers: {
@@ -184,12 +184,12 @@ registerButton.addEventListener("click", function () {
         throw new Error("Ошибка в процессе логина");
       };
       return response.json();
+      window.location.href = "/dashboard";
     })
     .catch(error => {
       document.getElementById("error").textContent = "Неверный логин или пароль";
       document.getElementById("error").style.display = "block";
     });
   });
-window.location.href = "/dashboard";
 });
 

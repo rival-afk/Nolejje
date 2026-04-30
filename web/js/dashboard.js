@@ -7,7 +7,9 @@ async function init() {
 init().then(() => {
 
 const userName = document.getElementById("user-name");
-userName.textContent = user["name"].toUpperCase();
+if (user.role != "admin") {
+  userName.textContent = user["name"].toUpperCase();
+};
 
 const token = localStorage.getItem("access_token");
 const homework = document.getElementById("homework");
@@ -40,6 +42,7 @@ if (user.role == "student") {
   initTeacher();
   showDashboard(user.role);
 } else if (user.role == "admin") {
+  initAdmin();
   showDashboard(user.role);
 } else {
   throw new Error("Неизвестная роль")
@@ -156,5 +159,182 @@ function showDashboard(role) {
   if (role == "admin") {
     document.getElementById("admin-dashboard").style.display = "block";
   }
+};
+
+function initAdmin() {
+  setupAdminNav();
+  loadPage("assign");
+};
+
+function setupAdminNav() {
+  document.querySelectorAll(".nav-item").forEach(item => {
+    item.addEventListener("click", () => {
+
+      document.querySelectorAll(".nav-item")
+        .forEach(item => item.classList.remove("active"));
+
+      item.classList.add("active");
+
+      loadPage(item.dataset.page);
+    });
+  });
+};
+
+function loadPage(page) {
+  const container = document.getElementById("admin-content");
+
+  if (page === "assign") {
+    container.innerHTML = `
+      <h1 class="h2">Назначения</h1>
+      <div id="assign-panel"></div>
+      <div id="assignments"></div>
+    `;
+
+    initAssignPage();
+  }
+
+  if (page === "analytics") {
+    container.innerHTML = `
+      <h1 class="h2">Аналитика</h1>
+      <p class="text">Скоро здесь будет статистика</p>
+    `;
+  }
+};
+
+function initAssignPage() {
+  renderAssignUI();
+  loadAssignments();
+};
+
+function renderAssignUI() {
+  const container = document.getElementById("assign-panel");
+
+  container.innerHTML = `
+    <div class="assign-box">
+      <select id="teacher-select"></select>
+      <select id="class-select"></select>
+      <select id="subject-select"></select>
+
+      <button id="assign-btn">Назначить</button>
+    </div>
+
+    <div id="assign-error" class="text" style="color:#ff5555;"></div>
+  `;
+
+  loadAssignData();
+};
+
+async function loadAssignData() {
+  try {
+    const token = localStorage.getItem("access_token");
+
+    const [teachers, classes, subjects] = await Promise.all([
+      fetch("/api/admin/teachers", { headers: { Authorization: "Bearer " + token }}).then(response => response.json()),
+      fetch("/api/classes").then(response => response.json()),
+      fetch("/api/subjects").then(response => response.json())
+    ]);
+
+    fillSelect("teacher-select", teachers);
+    fillSelect("class-select", classes);
+    fillSelect("subject-select", subjects);
+
+    initAssignButton();
+
+  } catch (e) {
+    document.getElementById("assign-error").textContent = "Ошибка загрузки данных";
+  }
+};
+
+function fillSelect(id, data) {
+  const select = document.getElementById(id);
+  select.innerHTML = `<option value="">Выберите</option>`;
+
+  data.forEach(item => {
+    const option = document.createElement("option");
+    option.value = item.id;
+    option.textContent = item.name;
+    select.appendChild(option);
+  });
+};
+
+function initAssignButton() {
+  const button = document.getElementById("assign-btn");
+
+  button.addEventListener("click", async () => {
+    const teacher_id = document.getElementById("teacher-select").value;
+    const class_id = document.getElementById("class-select").value;
+    const subject_id = document.getElementById("subject-select").value;
+
+    const error = document.getElementById("assign-error");
+
+    if (!teacher_id || !class_id || !subject_id) {
+      error.textContent = "Заполни все поля";
+      return;
+    }
+
+    try {
+      await fetch("/api/admin/assign", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + localStorage.getItem("access_token")
+        },
+        body: JSON.stringify({
+          teacher_id,
+          class_id,
+          subject_id
+        })
+      });
+
+      error.textContent = "";
+      loadAssignments();
+
+      button.textContent = "✓";
+      setTimeout(() => button.textContent = "Назначить", 800);
+    } catch {
+      error.textContent = "Ошибка назначения";
+    }
+  });
+};
+
+async function loadAssignments() {
+  const container = document.getElementById("assignments");
+  container.innerHTML = "<p class='text'>Загрузка...</p>";
+
+  try {
+    const data = await fetch("/api/admin/assignments", {
+      headers: {
+        "Authorization": "Bearer " + localStorage.getItem("access_token")
+      }
+    }).then(response => response.json());
+
+    renderAssignments(data);
+
+  } catch {
+    container.innerHTML = "<p class='text'>Ошибка загрузки</p>";
+  }
+};
+
+function renderAssignments(data) {
+  const container = document.getElementById("assignments");
+  container.innerHTML = "";
+
+  if (data.length === 0) {
+    container.innerHTML = "<p class='text'>Нет назначений</p>";
+    return;
+  }
+
+  data.forEach(item => {
+    const div = document.createElement("div");
+    div.classList.add("assignment-card");
+
+    div.innerHTML = `
+      <div class="assignment-main">
+        ${item.teacher} → ${item.class} → ${item.subject}
+      </div>
+    `;
+
+    container.appendChild(div);
+  });
 };
 });

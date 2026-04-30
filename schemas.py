@@ -18,3 +18,8 @@ class GradePost(BaseModel):
   subject_id: int
   grade: int
   date: date
+
+class Assign(BaseModel):
+  teacher_id: int
+  class_id: int
+  subject_id: int

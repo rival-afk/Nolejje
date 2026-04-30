@@ -12,7 +12,7 @@ from typing import Optional
 # из проекта
 from db import create_pool, close_pool
 import db
-from schemas import Register, Login, GradePost
+from schemas import Register, Login, GradePost, Assign
 from security import hash_password, verify_password
 from jwt_handler import create_access_token
 from auth import get_user_func
@@ -304,6 +304,44 @@ async def get_teacher_classes(current_user = Depends(get_user_func)):
         
     return [dict(row) for row in classes]
 
+@app.get("/admin/assignments")
+async def get_assignments(current_user = Depends(get_user_func)):
+    if current_user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin Only Endpoint")
+    
+    async with db.pool.acquire() as conn:
+        list = await conn.fetch("""
+            SELECT 
+                tcs.id,
+                users.name as teacher,
+                classes.number || classes.letter as class,
+                subjects.name as subject
+            FROM teacher_class_subjects tcs
+            JOIN teachers ON tcs.teacher_id = teachers.id
+            JOIN users ON teachers.user_id = users.id
+            JOIN classes ON tcs.class_id = classes.id
+            JOIN subjects ON tcs.subject_id = subjects.id
+            """)
+    
+    return [dict(row) for row in list]
+
+# <! DELETE-запросы!> #
+
+@app.delete("/admin/assign/{id}")
+async def delete_assignment(id: int, current_user = Depends(get_user_func)):
+    if current_user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin Only Endpoint")
+    
+    async with db.pool.acquire() as conn:
+        existing = await conn.fetchrow("""SELECT id FROM teacher_class_subjects WHERE id = $1""", id)
+        
+        if not existing:
+            raise HTTPException(status_code=404, detail=f"Assignment {id} Not Found")
+        
+        conn.execute("""
+            DELETE FROM teacher_class_subjects WHERE id = $1""", id)
+    return {"status": "successful"}
+
 # <! POST-запросы!> #
 
 @app.post("/auth/register")
@@ -327,21 +365,22 @@ async def register(user: Register):
                 detail="Incorrect role"
             )
         
-        if user.role == 'student' and user.class_id == None:
-            raise HTTPException(
-                status_code=400,
-                detail="Class ID is required for this role"
-            )
-        
-        class_exist = await conn.fetchval(
-                """SELECT 1 FROM classes WHERE id = $1""", user.class_id
-            )
-        
-        if not class_exist:
-            raise HTTPException(
-                status_code=400,
-                detail="Class don't exist"
-            )
+        if user.role == 'student':
+            if user.class_id == None:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Class ID is required for this role"
+                )
+            
+            class_exist = await conn.fetchval(
+                    """SELECT 1 FROM classes WHERE id = $1""", user.class_id
+                )
+            
+            if not class_exist:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Class don't exist"
+                )
 
         id =await conn.fetchrow(
             """
@@ -374,7 +413,7 @@ async def register(user: Register):
                 user_id
                 )
     
-    return {"message": "User created"}
+    return {"status": "successful"}
 
 @app.post("/auth/login")
 async def login(user: Login):
@@ -474,7 +513,7 @@ async def grades (grades: GradePost, current_user = Depends(get_user_func)):
         grades.date
     )
     
-    return {"status": "Successful"}
+    return {"status": "successful"}
 
 @app.post("/select_class")
 async def post_get_class(class_id: int, current_user = Depends(get_user_func)):
@@ -515,7 +554,22 @@ async def post_get_class(class_id: int, current_user = Depends(get_user_func)):
         class_id,
         current_user["id"])
     
-    return {"status": "Successful"}
+    return {"status": "successful"}
+
+@app.post("/admin/assign")
+async def post_assign(assign: Assign, current_user = Depends(get_user_func)):
+    if current_user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin Only Endpoint")
+    
+    async with db.pool.acquire() as conn:
+        assignment = await conn.fetchrow("""
+            INSERT INTO teacher_class_subjects (teacher_id, class_id, subject_id)
+            VALUES ($1, $2, $3)
+            RETURNING id
+            """,
+            assign["teacher_id"], assign["class_id"], assign["subject_id"])
+    
+    return assignment["id"]
 
 # <! Error Handlers !> #        my English is very well)
 
@@ -525,9 +579,9 @@ async def not_found_handler(request: Request, exc):
         return JSONResponse(
             status_code=404,
             content={
-                "error": "Not Found :(",
-                "detail": exc.detail,
-                "path": request.url.path
+            "error": "Route Not Found :(",
+            "detail": exc.detail,
+            "path": request.url.path,
             }
         )
     

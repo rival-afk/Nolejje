@@ -238,3 +238,53 @@ body {
   background: rgba(255,51,85,0.15);
   color: white;
 }
+
+.admin-main {
+  flex: 1;
+  padding: 30px;
+  overflow-y: auto;
+}
+
+.assign-box {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.assign-box select {
+  flex: 1;
+  padding: 10px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: white;
+}
+
+.assign-box button {
+  padding: 10px 20px;
+  border-radius: 10px;
+  border: none;
+  background: #ff3355;
+  color: white;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.assign-box button:hover {
+  transform: translateY(-2px);
+}
+
+.assignment-card {
+  padding: 14px;
+  margin-bottom: 10px;
+
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+
+  transition: 0.2s;
+}
+
+.assignment-card:hover {
+  background: rgba(255,255,255,0.07);
+}

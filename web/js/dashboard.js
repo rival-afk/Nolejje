@@ -33,14 +33,14 @@ if (user.role == "student") {
     userClass.textContent = data["class"] + " класс · " + data["school_name"];
   });
   initStudent();
-  showDashboard();
+  showDashboard(user.role);
 } else if (user.role == "teacher") {
   document.getElementById("student-dashboard").style.display = "none";
   document.getElementById("teacher-dashboard").style.display = "block";
   initTeacher();
-  showDashboard();
+  showDashboard(user.role);
 } else if (user.role == "admin") {
-  showDashboard();
+  showDashboard(user.role);
 } else {
   throw new Error("Неизвестная роль")
 };
@@ -145,15 +145,15 @@ function showDashboard(role) {
   document.getElementById("teacher-dashboard").style.display = "none";
   document.getElementById("admin-dashboard").style.display = "none";
 
-  if (role === "student") {
+  if (role == "student") {
     document.getElementById("student-dashboard").style.display = "block";
   }
 
-  if (role === "teacher") {
+  if (role == "teacher") {
     document.getElementById("teacher-dashboard").style.display = "block";
   }
 
-  if (role === "admin") {
+  if (role == "admin") {
     document.getElementById("admin-dashboard").style.display = "block";
   }
 };

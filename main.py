@@ -18,7 +18,6 @@ from jwt_handler import create_access_token
 from auth import get_user_func
 
 app = FastAPI()
-
 with open ("version.json") as file:
     VERSION_INFO = json.load(file)
 
@@ -74,7 +73,6 @@ async def get_subjects(current_user = Depends(get_user_func)):
 
 @app.get("/info")
 def get_info():
-    
     
     return {
         "name": "Nolejje",

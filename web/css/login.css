@@ -52,6 +52,7 @@ body {
   background-color: #2a2a2a;
   border-radius: 15px;
   height: 40px;
+  font-family: 'JetBrains Mono', monospace;
 }
 
 .button {

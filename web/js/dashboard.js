@@ -64,6 +64,7 @@ async function initStudent() {
 
   if (data.length == 0) {
     homework.textContent = "Нет домашних заданий!";
+    homework.classList.add("empty-hw")
   } else if (data.length != 0) {
     data.forEach(hw => {
       const item = document.createElement("div");
@@ -107,7 +108,6 @@ function loadClasses() {
   .then(data => {
     const list = document.getElementById("class-list");
     list.innerHTML = "";
-
     if (data.length == 0) {
       const div = document.createElement("div");
       div.textContent = "Нет классов";
@@ -117,26 +117,20 @@ function loadClasses() {
       data.forEach(teacherClass => {
         const div = document.createElement("div");
         div.classList.add("class-item");
-
         div.innerHTML = `
           <div>${teacherClass.name}</div>
           <div style="font-size:11px; color:#777;">
             ${teacherClass.students_count} учеников
           </div>
         `;
-
         div.addEventListener("click", () => {
           activeClassId = teacherClass.id;
-
           document.querySelectorAll(".class-item").forEach(el => {
             el.classList.remove("active");
           });
-
           div.classList.add("active");
-
           loadStudents(teacherClass.id);
         });
-
         list.appendChild(div);
       });
     };

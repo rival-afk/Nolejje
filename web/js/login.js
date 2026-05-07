@@ -14,7 +14,6 @@ const registerButton = document.getElementById("register-button");
 
 const roleStudentButton = document.getElementById("student");
 const roleTeacherButton = document.getElementById("teacher");
-const roleAdminButton = document.getElementById("admin");
 
 let role = null;
 let classId = null;
@@ -38,7 +37,7 @@ function changeContainerSize() {
 }
 
 function setActiveRole(activeButton) {
-    [roleStudentButton, roleTeacherButton, roleAdminButton].forEach(btn => {
+    [roleStudentButton, roleTeacherButton].forEach(btn => {
         btn.classList.remove("selected");
     });
     activeButton.classList.add("selected");
@@ -52,12 +51,6 @@ roleStudentButton.addEventListener("click", function () {
 roleTeacherButton.addEventListener("click", function () {
     setActiveRole(roleTeacherButton);
     role = 'teacher';
-    classesList.classList.add("hidden");
-    classId = null;
-});
-roleAdminButton.addEventListener("click", function () {
-    setActiveRole(roleAdminButton);
-    role = 'admin';
     classesList.classList.add("hidden");
     classId = null;
 });

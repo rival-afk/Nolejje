@@ -6,14 +6,12 @@ async function init() {
 }
 
 init().then(() => {
-
   const token = localStorage.getItem("access_token");
   const roleLabels = { student: "УЧЕНИК", teacher: "УЧИТЕЛЬ", admin: "АДМИН" };
 
   if (user.role !== "admin") {
     document.getElementById("header-username").textContent = user.name;
   }
-
   document.getElementById("header-role-badge").textContent = roleLabels[user.role] || user.role;
 
   function logout() {
@@ -38,7 +36,6 @@ init().then(() => {
   } else {
     throw new Error("Неизвестная роль");
   }
-
 });
 
 function showDashboard(role) {
@@ -51,21 +48,61 @@ function showDashboard(role) {
   if (role === "admin")   document.getElementById("admin-dashboard").style.display   = "flex";
 }
 
+function setupTabs(containerSelector, onSwitch) {
+  const tabs = document.querySelectorAll(containerSelector + " .dash-tab");
+  tabs.forEach(tab => {
+    tab.addEventListener("click", () => {
+      tabs.forEach(t => t.classList.remove("active"));
+      tab.classList.add("active");
+
+      const targetId = "tab-" + tab.dataset.tab;
+      document.querySelectorAll(".dash-tab-content").forEach(c => {
+        c.classList.add("hidden");
+      });
+      const target = document.getElementById(targetId);
+      if (target) target.classList.remove("hidden");
+
+      if (onSwitch) onSwitch(tab.dataset.tab);
+    });
+  });
+}
+
+// ════════════════════════════════════════════════════════
+// STUDENT
+// ════════════════════════════════════════════════════════
 async function initStudent(token) {
   document.getElementById("user-name").textContent = user.name.toUpperCase();
 
-  fetch("/api/students/me", { headers: { "Authorization": "Bearer " + token } })
-    .then(r => r.json())
-    .then(data => {
-      document.getElementById("user-class").textContent = data["class"] + " класс · " + data["school_name"];
-    })
-    .catch(() => {});
+  const meData = await fetch("/api/students/me", {
+    headers: { "Authorization": "Bearer " + token }
+  }).then(r => r.json()).catch(() => ({}));
+
+  if (meData.class) {
+    document.getElementById("user-class").textContent = meData.class + " класс · " + meData.school_name;
+  }
+  if (meData.avg_grade != null) {
+    document.getElementById("avg-grade").textContent = parseFloat(meData.avg_grade).toFixed(1);
+  }
+
+  setupTabs(".student-wrap", tab => {
+    if (tab === "grades" && !document.getElementById("grades-list").dataset.loaded) {
+      loadStudentGrades(token);
+    }
+    if (tab === "schedule" && !document.getElementById("schedule-list").dataset.loaded) {
+      loadStudentSchedule(token);
+    }
+  });
+
+  loadStudentHomework(token);
+}
+
+async function loadStudentHomework(token) {
+  const homework = document.getElementById("homework");
+  homework.innerHTML = "<p class='text'>Загрузка...</p>";
 
   const response = await fetch("/api/students/me/homeworks", {
     headers: { "Authorization": "Bearer " + token }
   });
-
-  const homework = document.getElementById("homework");
 
   if (!response.ok) {
     homework.innerHTML = "<p class='empty-hw'>Ошибка загрузки заданий</p>";
@@ -74,6 +111,7 @@ async function initStudent(token) {
 
   const data = await response.json();
   document.getElementById("hw-count").textContent = data.length;
+  homework.innerHTML = "";
 
   if (data.length === 0) {
     homework.innerHTML = "<p class='empty-hw'>Нет домашних заданий</p>";
@@ -111,6 +149,127 @@ async function initStudent(token) {
   });
 }
 
+async function loadStudentGrades(token) {
+  const container = document.getElementById("grades-list");
+  container.dataset.loaded = "1";
+  container.innerHTML = "<p class='text'>Загрузка...</p>";
+
+  try {
+    const data = await fetch("/api/students/me/grades", {
+      headers: { "Authorization": "Bearer " + token }
+    }).then(r => r.json());
+
+    container.innerHTML = "";
+
+    if (data.length === 0) {
+      container.innerHTML = "<p class='empty-hw'>Нет оценок</p>";
+      return;
+    }
+
+    const bySubject = {};
+    data.forEach(g => {
+      if (!bySubject[g.subject_name]) bySubject[g.subject_name] = [];
+      bySubject[g.subject_name].push(g);
+    });
+
+    Object.entries(bySubject).forEach(([subject, grades]) => {
+      const avg = (grades.reduce((s, g) => s + g.value, 0) / grades.length).toFixed(1);
+
+      const block = document.createElement("div");
+      block.classList.add("grades-subject-block");
+
+      const header = document.createElement("div");
+      header.classList.add("grades-subject-header");
+      header.innerHTML = `
+        <span class="hw-card-subjname">${subject}</span>
+        <span class="grades-avg">avg ${avg}</span>
+      `;
+
+      const pills = document.createElement("div");
+      pills.classList.add("grades-pills");
+      grades.forEach(g => {
+        const pill = document.createElement("div");
+        pill.classList.add("grade-pill");
+        if (g.value >= 8) pill.classList.add("grade-high");
+        else if (g.value >= 6) pill.classList.add("grade-mid");
+        else pill.classList.add("grade-low");
+
+        const d = new Date(g.date);
+        pill.innerHTML = `
+          <span class="grade-pill-value">${g.value}</span>
+          <span class="grade-pill-date">${d.getDate()}.${d.getMonth() + 1}</span>
+        `;
+        pills.appendChild(pill);
+      });
+
+      block.appendChild(header);
+      block.appendChild(pills);
+      container.appendChild(block);
+    });
+  } catch {
+    container.innerHTML = "<p class='text'>Ошибка загрузки</p>";
+  }
+}
+
+async function loadStudentSchedule(token) {
+  const container = document.getElementById("schedule-list");
+  container.dataset.loaded = "1";
+  container.innerHTML = "<p class='text'>Загрузка...</p>";
+
+  const dayNames = ["", "Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"];
+
+  try {
+    const data = await fetch("/api/students/me/schedule", {
+      headers: { "Authorization": "Bearer " + token }
+    }).then(r => r.json());
+
+    container.innerHTML = "";
+
+    if (data.length === 0) {
+      container.innerHTML = "<p class='empty-hw'>Расписание не заполнено</p>";
+      return;
+    }
+
+    const byDay = {};
+    data.forEach(lesson => {
+      if (!byDay[lesson.weekday]) byDay[lesson.weekday] = [];
+      byDay[lesson.weekday].push(lesson);
+    });
+
+    Object.entries(byDay).sort(([a], [b]) => a - b).forEach(([day, lessons]) => {
+      const block = document.createElement("div");
+      block.classList.add("schedule-day");
+
+      const dayLabel = document.createElement("div");
+      dayLabel.classList.add("schedule-day-label");
+      dayLabel.textContent = dayNames[day] || "День " + day;
+      block.appendChild(dayLabel);
+
+      lessons.forEach((lesson, i) => {
+        const row = document.createElement("div");
+        row.classList.add("schedule-row");
+        row.innerHTML = `
+          <span class="schedule-num">${i + 1}</span>
+          <span class="schedule-subject">${lesson.subject_name}</span>
+          <span class="schedule-teacher">${lesson.teacher_name}</span>
+          ${lesson.room ? `<span class="schedule-room">каб. ${lesson.room}</span>` : ""}
+        `;
+        block.appendChild(row);
+      });
+
+      container.appendChild(block);
+    });
+  } catch {
+    container.innerHTML = "<p class='text'>Ошибка загрузки</p>";
+  }
+}
+
+// ════════════════════════════════════════════════════════
+// TEACHER
+// ════════════════════════════════════════════════════════
+let activeClassId   = null;
+let activeStudents  = [];
+
 function initTeacher(token) {
   const teacherName = document.getElementById("teacher-name");
   if (teacherName) teacherName.textContent = user.name.toUpperCase();
@@ -139,14 +298,177 @@ function loadClasses(token) {
         div.addEventListener("click", () => {
           document.querySelectorAll(".class-item").forEach(el => el.classList.remove("active"));
           div.classList.add("active");
+          activeClassId = cls.id;
           document.getElementById("class-title").textContent = cls.name;
-          document.getElementById("hw-panel").style.display = "block";
-          loadStudents(cls.id, token);
+          document.getElementById("teacher-tabs").style.display = "flex";
+
+          document.querySelectorAll("#teacher-dashboard .dash-tab").forEach(t => {
+            t.classList.remove("active");
+            if (t.dataset.tab === "t-journal") t.classList.add("active");
+          });
+          document.querySelectorAll("#teacher-dashboard .dash-tab-content").forEach(c => c.classList.add("hidden"));
+          document.getElementById("tab-t-journal").classList.remove("hidden");
+
+          setupTeacherTabs(token, cls.id);
+          loadJournal(token, cls.id);
         });
         list.appendChild(div);
       });
     })
     .catch(() => {});
+}
+
+function setupTeacherTabs(token, classId) {
+  const tabs = document.querySelectorAll("#teacher-dashboard .dash-tab");
+  tabs.forEach(tab => {
+    const fresh = tab.cloneNode(true);
+    tab.parentNode.replaceChild(fresh, tab);
+  });
+
+  document.querySelectorAll("#teacher-dashboard .dash-tab").forEach(tab => {
+    tab.addEventListener("click", () => {
+      document.querySelectorAll("#teacher-dashboard .dash-tab").forEach(t => t.classList.remove("active"));
+      tab.classList.add("active");
+
+      document.querySelectorAll("#teacher-dashboard .dash-tab-content").forEach(c => c.classList.add("hidden"));
+      const target = document.getElementById("tab-" + tab.dataset.tab);
+      if (target) target.classList.remove("hidden");
+
+      if (tab.dataset.tab === "t-journal") loadJournal(token, classId);
+      if (tab.dataset.tab === "t-homework") loadStudents(classId, token);
+      if (tab.dataset.tab === "t-schedule") loadTeacherSchedule(token);
+    });
+  });
+}
+
+async function loadJournal(token, classId) {
+  const container = document.getElementById("grades-journal");
+  container.innerHTML = "<p class='text'>Загрузка...</p>";
+
+  try {
+    const [gradesData, studentsData] = await Promise.all([
+      fetch("/api/teacher/classes/" + classId + "/grades", {
+        headers: { "Authorization": "Bearer " + token }
+      }).then(r => r.json()),
+      fetch("/api/teacher/classes/" + classId + "/students", {
+        headers: { "Authorization": "Bearer " + token }
+      }).then(r => r.json())
+    ]);
+
+    activeStudents = studentsData;
+
+    const gradeSelect = document.getElementById("grade-student-select");
+    gradeSelect.innerHTML = "<option value=''>Ученик</option>";
+    studentsData.forEach(s => {
+      const opt = document.createElement("option");
+      opt.value = s.id;
+      opt.textContent = s.name;
+      gradeSelect.appendChild(opt);
+    });
+
+    const dateInput = document.getElementById("grade-date");
+    if (!dateInput.value) {
+      dateInput.value = new Date().toISOString().split("T")[0];
+    }
+
+    document.getElementById("grade-form").style.display = "block";
+    initGradeButton(token, classId);
+
+    container.innerHTML = "";
+
+    if (gradesData.length === 0) {
+      container.innerHTML = "<p class='empty-hw'>Нет оценок</p>";
+      return;
+    }
+
+    const byStudent = {};
+    gradesData.forEach(g => {
+      if (!byStudent[g.student_name]) byStudent[g.student_name] = [];
+      byStudent[g.student_name].push(g);
+    });
+
+    Object.entries(byStudent).forEach(([studentName, grades]) => {
+      const block = document.createElement("div");
+      block.classList.add("journal-row");
+
+      const name = document.createElement("div");
+      name.classList.add("journal-student-name");
+      name.textContent = studentName;
+
+      const pills = document.createElement("div");
+      pills.classList.add("grades-pills");
+
+      grades.forEach(g => {
+        const pill = document.createElement("div");
+        pill.classList.add("grade-pill", "grade-pill-deletable");
+        if (g.value >= 8) pill.classList.add("grade-high");
+        else if (g.value >= 6) pill.classList.add("grade-mid");
+        else pill.classList.add("grade-low");
+
+        const d = new Date(g.date);
+        pill.innerHTML = `
+          <span class="grade-pill-value">${g.value}</span>
+          <span class="grade-pill-date">${d.getDate()}.${d.getMonth() + 1}</span>
+        `;
+
+        pill.addEventListener("click", async () => {
+          pill.style.opacity = "0.4";
+          await fetch("/api/teacher/grades/" + g.grade_id, {
+            method: "DELETE",
+            headers: { "Authorization": "Bearer " + token }
+          });
+          loadJournal(token, classId);
+        });
+
+        pills.appendChild(pill);
+      });
+
+      block.appendChild(name);
+      block.appendChild(pills);
+      container.appendChild(block);
+    });
+  } catch {
+    container.innerHTML = "<p class='text'>Ошибка загрузки</p>";
+  }
+}
+
+function initGradeButton(token, classId) {
+  const btn = document.getElementById("add-grade-btn");
+  const fresh = btn.cloneNode(true);
+  btn.parentNode.replaceChild(fresh, btn);
+
+  fresh.addEventListener("click", async () => {
+    const student_id = document.getElementById("grade-student-select").value;
+    const value      = parseInt(document.getElementById("grade-value").value);
+    const date       = document.getElementById("grade-date").value;
+    const errorEl    = document.getElementById("grade-error");
+
+    if (!student_id || !value || !date) {
+      errorEl.textContent = "Заполни все поля";
+      errorEl.style.display = "block";
+      return;
+    }
+
+    if (value < 1 || value > 10) {
+      errorEl.textContent = "Балл от 1 до 10";
+      errorEl.style.display = "block";
+      return;
+    }
+
+    errorEl.style.display = "none";
+
+    await fetch("/api/teacher/grades", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + token
+      },
+      body: JSON.stringify({ student_id: parseInt(student_id), value, date })
+    });
+
+    document.getElementById("grade-value").value = "";
+    loadJournal(token, classId);
+  });
 }
 
 function loadStudents(classId, token) {
@@ -177,6 +499,61 @@ function loadStudents(classId, token) {
     });
 }
 
+async function loadTeacherSchedule(token) {
+  const container = document.getElementById("teacher-schedule");
+  container.innerHTML = "<p class='text'>Загрузка...</p>";
+
+  const dayNames = ["", "Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"];
+
+  try {
+    const data = await fetch("/api/teacher/schedule", {
+      headers: { "Authorization": "Bearer " + token }
+    }).then(r => r.json());
+
+    container.innerHTML = "";
+
+    if (data.length === 0) {
+      container.innerHTML = "<p class='empty-hw'>Расписание не заполнено</p>";
+      return;
+    }
+
+    const byDay = {};
+    data.forEach(lesson => {
+      if (!byDay[lesson.weekday]) byDay[lesson.weekday] = [];
+      byDay[lesson.weekday].push(lesson);
+    });
+
+    Object.entries(byDay).sort(([a], [b]) => a - b).forEach(([day, lessons]) => {
+      const block = document.createElement("div");
+      block.classList.add("schedule-day");
+
+      const dayLabel = document.createElement("div");
+      dayLabel.classList.add("schedule-day-label");
+      dayLabel.textContent = dayNames[day] || "День " + day;
+      block.appendChild(dayLabel);
+
+      lessons.forEach((lesson, i) => {
+        const row = document.createElement("div");
+        row.classList.add("schedule-row");
+        row.innerHTML = `
+          <span class="schedule-num">${i + 1}</span>
+          <span class="schedule-subject">${lesson.subject_name}</span>
+          <span class="schedule-teacher">${lesson.class_name}</span>
+          ${lesson.room ? `<span class="schedule-room">каб. ${lesson.room}</span>` : ""}
+        `;
+        block.appendChild(row);
+      });
+
+      container.appendChild(block);
+    });
+  } catch {
+    container.innerHTML = "<p class='text'>Ошибка загрузки</p>";
+  }
+}
+
+// ════════════════════════════════════════════════════════
+// ADMIN
+// ════════════════════════════════════════════════════════
 function initAdmin(token) {
   const sidebar = document.getElementById("admin-username-sidebar");
   if (sidebar) sidebar.textContent = user.email || "";
@@ -447,7 +824,7 @@ async function loadAnalytics(token) {
       headers: { "Authorization": "Bearer " + token }
     }).then(r => r.json());
 
-    const a = data[0];
+    const a   = data[0];
     const avg = a.avg_grade ? parseFloat(a.avg_grade).toFixed(1) : "—";
 
     container.innerHTML = `

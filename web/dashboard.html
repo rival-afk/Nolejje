@@ -6,13 +6,14 @@
   <link rel="icon" type="image/png" href="img/icon.png">
   <meta name="darkreader-lock">
   <link href="css/dashboard.css" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;500;700&display=swap" rel="stylesheet">  <!--шрифт unbounded-->
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap" rel="stylesheet"> <!--шрифт jetbrains mono-->
+  <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap" rel="stylesheet">
   <title>Дэшборд — Nolejje</title>
 </head>
 <body>
 <div class="a1"></div>
 <div class="a2"></div>
+
 <header class="header">
   <div class="header-left">
     <a href="/" class="logo"><img src="img/nolejje_dark.png" alt="Nolejje"></a>
@@ -32,6 +33,8 @@
     </div>
   </div>
 </header>
+
+<!-- STUDENT -->
 <div id="student-dashboard" style="display:none;">
   <div class="student-wrap">
     <div class="student-hero">
@@ -50,12 +53,28 @@
         </div>
       </div>
     </div>
-    <div class="section-header">
-      <span class="section-tag">ДОМАШНИЕ ЗАДАНИЯ</span>
+
+    <div class="dash-tabs">
+      <button class="dash-tab active" data-tab="homework">Домашние задания</button>
+      <button class="dash-tab" data-tab="grades">Оценки</button>
+      <button class="dash-tab" data-tab="schedule">Расписание</button>
     </div>
-    <div id="homework"></div>
+
+    <div class="dash-tab-content" id="tab-homework">
+      <div id="homework"></div>
+    </div>
+
+    <div class="dash-tab-content hidden" id="tab-grades">
+      <div id="grades-list"></div>
+    </div>
+
+    <div class="dash-tab-content hidden" id="tab-schedule">
+      <div id="schedule-list"></div>
+    </div>
   </div>
 </div>
+
+<!-- TEACHER -->
 <div id="teacher-dashboard" style="display:none;">
   <div class="teacher-wrap">
     <div class="teacher-hero">
@@ -71,19 +90,50 @@
         <div class="main-header-row">
           <h2 id="class-title" class="main-title">Выберите класс</h2>
         </div>
-        <div id="students"></div>
-        <div class="panel" id="hw-panel" style="display:none;">
-          <span class="section-tag">ДОБАВИТЬ ЗАДАНИЕ</span>
-          <div class="panel-inputs">
-            <input class="dash-input" id="hw-title" placeholder="Название">
-            <input class="dash-input" id="hw-desc" placeholder="Описание">
-            <button class="accent-button" id="add-hw">Добавить</button>
+
+        <div class="dash-tabs" id="teacher-tabs" style="display:none;">
+          <button class="dash-tab active" data-tab="t-journal">Журнал</button>
+          <button class="dash-tab" data-tab="t-homework">Задания</button>
+          <button class="dash-tab" data-tab="t-schedule">Расписание</button>
+        </div>
+
+        <div class="dash-tab-content" id="tab-t-journal">
+          <div id="grade-form" style="display:none;">
+            <div class="panel" style="margin-bottom:16px;">
+              <span class="section-tag">ВЫСТАВИТЬ ОЦЕНКУ</span>
+              <div class="panel-inputs" style="margin-top:14px;">
+                <select class="assign-select" id="grade-student-select"></select>
+                <input class="dash-input" id="grade-value" type="number" min="1" max="10" placeholder="Балл">
+                <input class="dash-input" id="grade-date" type="date">
+                <button class="accent-button" id="add-grade-btn">Выставить</button>
+              </div>
+              <div class="assign-error" id="grade-error"></div>
+            </div>
           </div>
+          <div id="grades-journal"></div>
+        </div>
+
+        <div class="dash-tab-content hidden" id="tab-t-homework">
+          <div class="panel" style="margin-bottom:16px;">
+            <span class="section-tag">ДОБАВИТЬ ЗАДАНИЕ</span>
+            <div class="panel-inputs" style="margin-top:14px;">
+              <input class="dash-input" id="hw-title" placeholder="Название">
+              <input class="dash-input" id="hw-desc" placeholder="Описание">
+              <button class="accent-button" id="add-hw">Добавить</button>
+            </div>
+          </div>
+          <div id="students"></div>
+        </div>
+
+        <div class="dash-tab-content hidden" id="tab-t-schedule">
+          <div id="teacher-schedule"></div>
         </div>
       </div>
     </div>
   </div>
 </div>
+
+<!-- ADMIN -->
 <div id="admin-dashboard" style="display:none;">
   <div class="admin-layout">
     <aside class="admin-sidebar">
@@ -91,21 +141,11 @@
         <span class="admin-badge">ADMIN</span>
       </div>
       <nav class="admin-nav">
-        <div class="nav-item active" data-page="assign">
-          <span class="nav-icon">●</span>Назначения
-        </div>
-        <div class="nav-item" data-page="classes">
-          <span class="nav-icon">●</span>Классы
-        </div>
-        <div class="nav-item" data-page="teachers">
-          <span class="nav-icon">●</span>Учителя
-        </div>
-        <div class="nav-item" data-page="analytics">
-          <span class="nav-icon">●</span>Аналитика
-        </div>
-        <div class="nav-item" data-page="reports">
-          <span class="nav-icon">●</span>Жалобы
-        </div>
+        <div class="nav-item active" data-page="assign"><span class="nav-icon">●</span>Назначения</div>
+        <div class="nav-item" data-page="classes"><span class="nav-icon">●</span>Классы</div>
+        <div class="nav-item" data-page="teachers"><span class="nav-icon">●</span>Учителя</div>
+        <div class="nav-item" data-page="analytics"><span class="nav-icon">●</span>Аналитика</div>
+        <div class="nav-item" data-page="reports"><span class="nav-icon">●</span>Жалобы</div>
       </nav>
       <div class="admin-sidebar-footer">
         <span id="admin-username-sidebar"></span>
@@ -115,6 +155,7 @@
     <main class="admin-main" id="admin-content"></main>
   </div>
 </div>
+
 <script src="js/auth.js"></script>
 <script src="js/dashboard.js"></script>
 </body>

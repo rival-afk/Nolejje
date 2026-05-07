@@ -106,13 +106,15 @@ async def get_current_student(student = Depends(get_current_student_func)):
     class_id = student["class_id"]
     async with db.pool.acquire() as conn:
         student_data = await conn.fetchrow("""
-        SELECT classes.number || ' «' || classes.letter || '»' AS class, schools.name AS school_name FROM students
+        SELECT classes.number || ' «' || classes.letter || '»' AS class, schools.name AS school_name, COALESCE(AVG(g.grade), 0) AS avg_grade FROM students
         JOIN classes ON students.class_id = classes.id
         JOIN schools ON classes.school_id = schools.id
+        LEFT JOIN grades g ON students.id = g.student_id
         WHERE students.id = $1
+        GROUP BY classes.number, classes.letter, schools.name
         """,
         student["id"])
-    return {"student_id": student_id, "class_id": class_id, "class": student_data["class"], "school_name": student_data["school_name"]}
+    return {"student_id": student_id, "class_id": class_id, "class": student_data["class"], "school_name": student_data["school_name"], "avg_grade": student_data["avg_grade"]}
 
 @app.get("/students/me/homeworks")
 async def get_homeworks (limit: Optional[int] = None, offset: Optional[int] = None, only_active: Optional[bool] = None, student = Depends(get_current_student_func)):
@@ -385,6 +387,95 @@ async def get_admin_teachers(current_user = Depends(get_user_func)):
 
     return [dict(row) for row in teachers]
 
+@app.get("/students/me/grades")
+async def get_grades(current_user = Depends(get_user_func)):
+    if current_user["role"] != "student":
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    async with db.pool.acquire() as conn:
+        grades = await conn.fetch("""
+            SELECT grades.id, subjects.name AS subject_name, grades.grade AS value, grades.date, grades.lesson_id
+            FROM grades
+            JOIN subjects ON grades.subject_id = subjects.id
+            JOIN students ON grades.student_id = students.id
+            WHERE students.user_id = $1
+            ORDER BY grades.date DESC
+            """, current_user["id"])
+
+    return [dict(row) for row in grades]
+
+@app.get("/students/me/schedule")
+async def get_schedule(current_user = Depends(get_user_func)):
+    if current_user["role"] != "student":
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    async with db.pool.acquire() as conn:
+        schedule = await conn.fetch("""
+            SELECT 
+                lessons.weekday,
+                subjects.name AS subject_name,
+                users.name AS teacher_name,
+                lessons.room
+            FROM lessons
+            JOIN subjects ON lessons.subject_id = subjects.id
+            JOIN teachers ON lessons.teacher_id = teachers.id
+            JOIN users ON teachers.user_id = users.id
+            JOIN students ON lessons.class_id = students.class_id
+            WHERE students.user_id = $1
+            ORDER BY lessons.weekday, lessons.time
+        """, current_user["id"])
+
+    return [dict(row) for row in schedule]
+
+@app.get("/teacher/classes/{class_id}/grades")
+async def get_class_grades(class_id: int, current_user = Depends(get_user_func)):
+    if current_user["role"] != "teacher":
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    async with db.pool.acquire() as conn:
+        grades = await conn.fetch("""
+            SELECT 
+                students.id AS student_id,
+                users.name AS student_name,
+                subjects.name AS subject_name,
+                grades.grade AS value,
+                grades.date,
+                grades.id AS grade_id
+            FROM grades
+            JOIN students ON grades.student_id = students.id
+            JOIN users ON students.user_id = users.id
+            JOIN subjects ON grades.subject_id = subjects.id
+            WHERE students.class_id = $1
+            ORDER BY grades.date DESC
+        """, class_id)
+
+    return [dict(row) for row in grades]
+
+@app.get("/api/teacher/schedule")
+async def get_teacher_schedule(current_user = Depends(get_user_func)):
+    if current_user["role"] != "teacher":
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    async with db.pool.acquire() as conn:
+        schedule = await conn.fetch(
+            """
+            SELECT
+                lessons.weekday,
+                classes.number || classes.letter AS class_name,
+                subjects.name AS subject_name,
+                lessons.room
+            FROM lessons
+            JOIN subjects ON lessons.subject_id = subjects.id
+            JOIN classes ON lessons.class_id = classes.id
+            JOIN teachers ON lessons.teacher_id = teachers.id
+            WHERE teachers.user_id = $1
+            ORDER BY lessons.weekday, lessons.time
+            """,
+            current_user["id"]
+        )
+
+    return [dict(row) for row in schedule]
+
 # <! DELETE-запросы!> #
 
 @app.delete("/admin/assign/{id}")
@@ -402,6 +493,46 @@ async def delete_assignment(id: int, current_user = Depends(get_user_func)):
             DELETE FROM teacher_class_subjects WHERE id = $1""", id)
     return {"status": "successful"}
 
+@app.delete("/api/teacher/grades/{grade_id}")
+async def delete_grade(grade_id: int, current_user = Depends(get_user_func)):
+    if current_user["role"] != "teacher":
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    async with db.pool.acquire() as conn:
+        teacher = await conn.fetchrow(
+            "SELECT id FROM teachers WHERE user_id = $1",
+            current_user["id"]
+        )
+
+        if not teacher:
+            raise HTTPException(status_code=403, detail="Forbidden")
+
+        grade = await conn.fetchrow(
+            """
+            SELECT g.id FROM grades g
+            JOIN subjects s ON g.subject_id = s.id
+            WHERE g.id = $1 AND s.teacher_id = $2
+            """,
+            grade_id,
+            teacher["id"]
+        )
+
+        if not grade:
+            existing = await conn.fetchrow(
+                "SELECT id FROM grades WHERE id = $1",
+                grade_id
+            )
+            if not existing:
+                raise HTTPException(status_code=404, detail=f"Grade {grade_id} Not Found")
+            raise HTTPException(status_code=403, detail="Forbidden")
+
+        await conn.execute(
+            "DELETE FROM grades WHERE id = $1",
+            grade_id
+        )
+
+    return {"status": "successful"}
+
 # <! POST-запросы!> #
 
 @app.post("/auth/register")
@@ -415,7 +546,7 @@ async def register(user: Register):
 
         password_hash = hash_password(user.password)
 
-        if user.role not in ('student', 'teacher', 'admin'):
+        if user.role not in ('student', 'teacher'):
             raise HTTPException(status_code=400, detail="Incorrect role")
 
         if user.role == 'student':
@@ -475,18 +606,26 @@ async def login(user: Login):
     
     return {"access_token": token}
 
-@app.post("/grades")
-async def grades (grades: GradePost, current_user = Depends(get_user_func)):
-    
-    
+@app.post("/api/teacher/grades")
+async def grades (grade_data: dict, current_user = Depends(get_user_func)):
     if current_user["role"] != "teacher":
         raise HTTPException(
             status_code=403,
             detail="Forbidden :|"
         )
-    
+
+    student_id = grade_data.get("student_id")
+    subject_id = grade_data.get("subject_id")
+    value = grade_data.get("value")
+    date = grade_data.get("date")
+
+    if student_id is None or subject_id is None or value is None or date is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Missing required grade fields"
+        )
+
     async with db.pool.acquire() as conn:
-        
         teacher_id = await conn.fetchrow("""
             SELECT id FROM teachers
             WHERE user_id = $1
@@ -503,7 +642,7 @@ async def grades (grades: GradePost, current_user = Depends(get_user_func)):
         subject_teacher_class_id = await conn.fetchrow("""
             SELECT class_id, teacher_id FROM subjects WHERE id = $1
             """,
-            grades.subject_id
+            subject_id
             )
         
         if subject_teacher_class_id == None:
@@ -521,7 +660,7 @@ async def grades (grades: GradePost, current_user = Depends(get_user_func)):
         student_class_id = await conn.fetchrow("""
             SELECT class_id FROM students WHERE id = $1
             """,
-            grades.student_id
+            student_id
             )
         
         if student_class_id == None:
@@ -541,10 +680,10 @@ async def grades (grades: GradePost, current_user = Depends(get_user_func)):
         INSERT INTO grades (student_id, subject_id, grade, date)
         VALUES ($1, $2, $3, $4)
         """,
-        grades.student_id,
-        grades.subject_id,
-        grades.grade,
-        grades.date
+        student_id,
+        subject_id,
+        value,
+        date
     )
     
     return {"status": "successful"}

@@ -230,3 +230,13 @@ body {
   opacity: 1;
   transform: translateY(0);
 }
+
+.role_tab.selected {
+    background-color: #333333;
+    color: #ffffff;
+    outline-color: #797979;
+}
+
+#class-select.hidden {
+    display: none;
+}

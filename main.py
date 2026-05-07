@@ -323,6 +323,68 @@ async def get_assignments(current_user = Depends(get_user_func)):
     
     return [dict(row) for row in list]
 
+@app.get("/admin/classes")
+async def get_admin_classes(current_user = Depends(get_user_func)):
+    if current_user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin Only Endpoint")
+    
+    async with db.pool.acquire() as conn:
+        classes = await conn.fetch("""
+            SELECT classes.id, classes.number || classes.letter AS name, COUNT(students.id) AS students_count FROM classes
+            JOIN schools ON schools.id = classes.school_id
+            LEFT JOIN students ON students.class_id = classes.id
+            GROUP BY classes.id, classes.number, classes.letter, schools.name
+            """)
+    
+    return [dict(row) for row in classes]
+
+@app.get("/admin/analytics")
+async def get_admin_analytics(current_user = Depends(get_user_func)):
+    if current_user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin Only Endpoint")
+
+    async with db.pool.acquire() as conn:
+        analytics = await conn.fetch("""
+            SELECT 
+                COUNT(users.id) AS total_users,
+                COUNT(CASE WHEN users.role = 'student' THEN 1 END) AS total_students,
+                COUNT(CASE WHEN users.role = 'teacher' THEN 1 END) AS total_teachers,
+                COUNT(CASE WHEN users.role = 'admin' THEN 1 END) AS total_admins,
+                COUNT(DISTINCT classes.id) AS total_classes,
+                AVG(students.grade) AS avg_grade
+            FROM users
+            LEFT JOIN students ON students.user_id = users.id
+            LEFT JOIN classes ON classes.id = students.class_id
+            """)
+    
+    return [dict(row) for row in analytics]
+
+@app.get("/admin/subjects")
+async def get_admin_subjects(current_user = Depends(get_user_func)):
+    if current_user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin Only Endpoint")
+
+    async with db.pool.acquire() as conn:
+        subjects = await conn.fetch("""
+            SELECT subjects.id, subjects.name, classes.number || classes.letter AS class FROM subjects
+            JOIN classes ON subjects.class_id = classes.id
+            """)
+    
+    return [dict(row) for row in subjects]
+
+@app.get("/admin/teachers")
+async def get_admin_teachers(current_user = Depends(get_user_func)):
+    if current_user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin Only Endpoint")
+
+    async with db.pool.acquire() as conn:
+        teachers = await conn.fetch("""
+            SELECT teachers.id, users.name FROM teachers
+            JOIN users ON teachers.user_id = users.id
+            """)
+
+    return [dict(row) for row in teachers]
+
 # <! DELETE-запросы!> #
 
 @app.delete("/admin/assign/{id}")
@@ -344,73 +406,47 @@ async def delete_assignment(id: int, current_user = Depends(get_user_func)):
 
 @app.post("/auth/register")
 async def register(user: Register):
-    
     async with db.pool.acquire() as conn:
         existing_user = await conn.fetchrow(
-        "SELECT id FROM users WHERE email = $1", user.email)
-        
+            "SELECT id FROM users WHERE email = $1", user.email
+        )
         if existing_user:
-            raise HTTPException(
-                status_code=400,
-                detail="Email already registered"
-            )
+            raise HTTPException(status_code=400, detail="Email already registered")
 
         password_hash = hash_password(user.password)
 
-        if not user.role in ('student', 'teacher', 'admin'):
-            raise HTTPException(
-                status_code=400,
-                detail="Incorrect role"
-            )
-        
-        if user.role == 'student':
-            if user.class_id == None:
-                raise HTTPException(
-                    status_code=400,
-                    detail="Class ID is required for this role"
-                )
-            
-            class_exist = await conn.fetchval(
-                    """SELECT 1 FROM classes WHERE id = $1""", user.class_id
-                )
-            
-            if not class_exist:
-                raise HTTPException(
-                    status_code=400,
-                    detail="Class don't exist"
-                )
+        if user.role not in ('student', 'teacher', 'admin'):
+            raise HTTPException(status_code=400, detail="Incorrect role")
 
-        id =await conn.fetchrow(
+        if user.role == 'student':
+            if user.class_id is None:
+                raise HTTPException(status_code=400, detail="Class ID is required for this role")
+            class_exists = await conn.fetchval(
+                "SELECT 1 FROM classes WHERE id = $1", user.class_id
+            )
+            if not class_exists:
+                raise HTTPException(status_code=400, detail="Class doesn't exist")
+
+        id_record = await conn.fetchrow(
             """
             INSERT INTO users (name, email, passwd_hash, role)
             VALUES ($1, $2, $3, $4)
             RETURNING id
             """,
-            user.name,
-            user.email,
-            password_hash,
-            user.role
+            user.name, user.email, password_hash, user.role
         )
-        
-        user_id = id["id"]
-        
+        user_id = id_record["id"]
+
         if user.role == 'student':
-            await conn.execute("""
-                INSERT INTO students (user_id, class_id)
-                VALUES ($1, $2)
-                """,
-                user_id,
-                user.class_id
+            await conn.execute(
+                "INSERT INTO students (user_id, class_id) VALUES ($1, $2)",
+                user_id, user.class_id
             )
-        
-        if user.role == 'teacher':
-            await conn.execute("""
-                INSERT INTO teachers (user_id)
-                VALUES ($1)
-                """,
-                user_id
-                )
-    
+        elif user.role == 'teacher':
+            await conn.execute(
+                "INSERT INTO teachers (user_id) VALUES ($1)", user_id
+            )
+
     return {"status": "successful"}
 
 @app.post("/auth/login")

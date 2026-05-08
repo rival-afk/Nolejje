@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import time
 import requests
 import json
+from datetime import date
 from typing import Optional
 
 # из проекта
@@ -50,6 +51,20 @@ async def startup():
 async def shutdown():
     await close_pool()
 
+@app.on_event("startup")
+async def startup():
+    print("Запуск...")
+    try:
+        await create_pool()
+        print("Подключение к базе данных успешно")
+    except Exception as e:
+        print(f"Ошибка при запуске: {e}")
+        raise
+
+@app.on_event("shutdown")
+async def shutdown():
+    print("Завершение работы...")
+
 # <! GET-запросы !> #       (да, я просто теряю время на красивом оформлении комментариев)
 @app.get("/")
 def root():
@@ -78,6 +93,17 @@ def get_info():
         "name": "Nolejje",
         "version": VERSION_INFO["version"],
         "updated": VERSION_INFO["updated"]
+    }
+
+@app.get("/developer/age")
+def get_developer_age():
+    birth_date = date(2012, 3, 28)
+    today = date.today()
+    age = today.year - birth_date.year - ((today.month, today.day) < (birth_date.month, birth_date.day))
+    return {
+        "name": "itz_rival",
+        "age": age,
+        "stack": ["python", "js", "aiogram", "docker", "fastapi", "html", "css", "nginx"]
     }
 
 @app.get("/students")

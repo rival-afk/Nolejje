@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/png" href="img/icon.png">
+  <meta name="darkreader-lock">
+  <title>Разработчик — Nolejje</title>
+  <link href="css/pages.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="page-root">
+    <header class="header">
+      <div class="header-left">
+        <a href="/" class="logo"><img src="img/nolejje_dark.png" alt="Nolejje"></a>
+      </div>
+      <div class="header-center">
+        <nav id="header-nav">
+          <a class="header-nav-a" href="/">Главная</a>
+          <a class="header-nav-a" href="dashboard">Дэшборд</a>
+          <a class="header-nav-a active" href="developer">Разработчик</a>
+          <a class="header-nav-a" href="profile">Профиль</a>
+        </nav>
+      </div>
+      <div class="header-right">
+        <div id="header-user">
+          <span id="header-role-badge"></span>
+          <span id="header-username"></span>
+          <button class="header-btn" id="logout-btn">Выйти</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="page-content">
+      <section class="developer-card">
+        <div class="developer-hero">
+          <div class="developer-avatar">i</div>
+          <div>
+            <span class="section-tag">РАЗРАБОТЧИК</span>
+            <h1>itz_rival</h1>
+            <p class="developer-subtitle"><span id="dev-age-span"></span>, создаю Nolejje на стеке Python, JS, Docker, FastAPI, HTML, CSS, Nginx.</p>
+            <div class="developer-stats">
+              <div>
+                <span class="stat-label">Возраст</span>
+                <strong id="developer-age">Загрузка...</strong>
+              </div>
+              <div>
+                <span class="stat-label">Стек</span>
+                <strong>Python · JS · Aiogram · Docker · FastAPI · HTML · CSS · Nginx</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="developer-body">
+          <p>Этот проект делаю сам: фронтенд, бэкенд, дизайн и документацию. Возраст подсчитывается автоматически, но дата рождения скрыта — на сервере возвращается только текущий возраст.</p>
+          <div class="tags-row">
+            <span class="tag">python</span>
+            <span class="tag">javascript</span>
+            <span class="tag">aiogram</span>
+            <span class="tag">docker</span>
+            <span class="tag">fastapi</span>
+            <span class="tag">html</span>
+            <span class="tag">css</span>
+            <span class="tag">nginx</span>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="js/auth.js"></script>
+  <script src="js/developer.js"></script>
+</body>
+</html>

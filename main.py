@@ -7,13 +7,15 @@ from fastapi.middleware.cors import CORSMiddleware
 import time
 import requests
 import json
+import base64
+import asyncpg
 from datetime import date
 from typing import Optional
 
 # из проекта
 from db import create_pool, close_pool
 import db
-from schemas import Register, Login, GradePost, Assign
+from schemas import Register, Login, GradePost, Assign, UserUpdate, AvatarUpdate, AdminCreate, ClassCreate, SubjectCreate
 from security import hash_password, verify_password
 from jwt_handler import create_access_token
 from auth import get_user_func
@@ -33,6 +35,45 @@ app.add_middleware(
 
 # <! Functions !> #         (для функций не связанных с эндпоинтами)
 
+ALLOWED_AVATAR_MIME_TYPES = {
+    "image/png",
+    "image/jpeg",
+    "image/jpg",
+    "image/webp",
+    "image/gif",
+}
+
+MAX_AVATAR_BYTES = 2 * 1024 * 1024
+
+async def ensure_profile_columns():
+    async with db.pool.acquire() as conn:
+        await conn.execute(
+            """
+            ALTER TABLE users
+            ADD COLUMN IF NOT EXISTS avatar_url TEXT
+            """
+        )
+
+async def get_or_create_school_id(conn, school_name: str):
+    normalized_name = school_name.strip()
+    school = await conn.fetchrow(
+        "SELECT id FROM schools WHERE LOWER(name) = LOWER($1)",
+        normalized_name
+    )
+
+    if school:
+        return school["id"]
+
+    created_school = await conn.fetchrow(
+        """
+        INSERT INTO schools (name)
+        VALUES ($1)
+        RETURNING id
+        """,
+        normalized_name
+    )
+    return created_school["id"]
+
 async def get_current_student_func(current_user=Depends(get_user_func)):
     async with db.pool.acquire() as conn:
         student = await conn.fetchrow("SELECT * FROM students WHERE user_id=$1", current_user["id"])
@@ -45,17 +86,10 @@ async def get_current_student_func(current_user=Depends(get_user_func)):
 
 @app.on_event("startup")
 async def startup():
-    await create_pool()
-
-@app.on_event("shutdown")
-async def shutdown():
-    await close_pool()
-
-@app.on_event("startup")
-async def startup():
     print("Запуск...")
     try:
         await create_pool()
+        await ensure_profile_columns()
         print("Подключение к базе данных успешно")
     except Exception as e:
         print(f"Ошибка при запуске: {e}")
@@ -64,6 +98,7 @@ async def startup():
 @app.on_event("shutdown")
 async def shutdown():
     print("Завершение работы...")
+    await close_pool()
 
 # <! GET-запросы !> #       (да, я просто теряю время на красивом оформлении комментариев)
 @app.get("/")
@@ -125,6 +160,75 @@ async def get_students(student_id: int):
 @app.get("/users/me")
 async def get_current_user(current_user = Depends(get_user_func)):
     return current_user
+
+@app.patch("/users/me")
+async def update_current_user(payload: UserUpdate, current_user = Depends(get_user_func)):
+    name = payload.name.strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="Имя не может быть пустым")
+
+    async with db.pool.acquire() as conn:
+        user = await conn.fetchrow(
+            """
+            UPDATE users
+            SET name = $1
+            WHERE id = $2
+            RETURNING *
+            """,
+            name,
+            current_user["id"]
+        )
+
+    return user
+
+@app.post("/users/me/avatar")
+async def update_avatar(payload: AvatarUpdate, current_user = Depends(get_user_func)):
+    avatar_url = payload.avatar_url.strip()
+
+    if not avatar_url.startswith("data:") or ";base64," not in avatar_url:
+        raise HTTPException(status_code=400, detail="Некорректный формат аватара")
+
+    header, encoded = avatar_url.split(",", 1)
+    mime_type = header[5:].split(";")[0].lower()
+
+    if mime_type not in ALLOWED_AVATAR_MIME_TYPES:
+        raise HTTPException(status_code=400, detail="Поддерживаются PNG, JPG, WEBP и GIF")
+
+    try:
+        file_bytes = base64.b64decode(encoded, validate=True)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Не удалось декодировать изображение")
+
+    if len(file_bytes) > MAX_AVATAR_BYTES:
+        raise HTTPException(status_code=400, detail="Максимальный размер аватара — 2 МБ")
+
+    async with db.pool.acquire() as conn:
+        user = await conn.fetchrow(
+            """
+            UPDATE users
+            SET avatar_url = $1
+            WHERE id = $2
+            RETURNING avatar_url
+            """,
+            avatar_url,
+            current_user["id"]
+        )
+
+    return {"avatar_url": user["avatar_url"]}
+
+@app.delete("/users/me/avatar")
+async def delete_avatar(current_user = Depends(get_user_func)):
+    async with db.pool.acquire() as conn:
+        await conn.execute(
+            """
+            UPDATE users
+            SET avatar_url = NULL
+            WHERE id = $1
+            """,
+            current_user["id"]
+        )
+
+    return {"status": "successful"}
 
 @app.get("/students/me")
 async def get_current_student(student = Depends(get_current_student_func)):
@@ -321,7 +425,7 @@ async def get_teacher_classes(current_user = Depends(get_user_func)):
         
         classes = await conn.fetch("""
             SELECT classes.id, classes.number || classes.letter AS name, schools.name AS school_name, COUNT(students.id) AS students_count FROM classes
-            JOIN schools ON classes.school_id = classes.id
+            JOIN schools ON classes.school_id = schools.id
             JOIN subjects ON subjects.class_id = classes.id
             LEFT JOIN students ON students.class_id = classes.id
             WHERE subjects.teacher_id = $1
@@ -366,6 +470,20 @@ async def get_admin_classes(current_user = Depends(get_user_func)):
     
     return [dict(row) for row in classes]
 
+@app.get("/admin/schools")
+async def get_admin_schools(current_user = Depends(get_user_func)):
+    if current_user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin Only Endpoint")
+
+    async with db.pool.acquire() as conn:
+        schools = await conn.fetch("""
+            SELECT id, name
+            FROM schools
+            ORDER BY name
+            """)
+
+    return [dict(row) for row in schools]
+
 @app.get("/admin/analytics")
 async def get_admin_analytics(current_user = Depends(get_user_func)):
     if current_user["role"] != "admin":
@@ -373,16 +491,13 @@ async def get_admin_analytics(current_user = Depends(get_user_func)):
 
     async with db.pool.acquire() as conn:
         analytics = await conn.fetch("""
-            SELECT 
-                COUNT(users.id) AS total_users,
-                COUNT(CASE WHEN users.role = 'student' THEN 1 END) AS total_students,
-                COUNT(CASE WHEN users.role = 'teacher' THEN 1 END) AS total_teachers,
-                COUNT(CASE WHEN users.role = 'admin' THEN 1 END) AS total_admins,
-                COUNT(DISTINCT classes.id) AS total_classes,
-                AVG(students.grade) AS avg_grade
-            FROM users
-            LEFT JOIN students ON students.user_id = users.id
-            LEFT JOIN classes ON classes.id = students.class_id
+            SELECT
+                (SELECT COUNT(*) FROM users) AS total_users,
+                (SELECT COUNT(*) FROM users WHERE role = 'student') AS total_students,
+                (SELECT COUNT(*) FROM users WHERE role = 'teacher') AS total_teachers,
+                (SELECT COUNT(*) FROM users WHERE role = 'admin') AS total_admins,
+                (SELECT COUNT(*) FROM classes) AS total_classes,
+                (SELECT COALESCE(AVG(grades.grade), 0) FROM grades) AS avg_grade
             """)
     
     return [dict(row) for row in analytics]
@@ -413,6 +528,21 @@ async def get_admin_teachers(current_user = Depends(get_user_func)):
 
     return [dict(row) for row in teachers]
 
+@app.get("/admin/admins")
+async def get_admin_admins(current_user = Depends(get_user_func)):
+    if current_user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin Only Endpoint")
+
+    async with db.pool.acquire() as conn:
+        admins = await conn.fetch("""
+            SELECT id, name, email
+            FROM users
+            WHERE role = 'admin'
+            ORDER BY name
+            """)
+
+    return [dict(row) for row in admins]
+
 @app.get("/students/me/grades")
 async def get_grades(current_user = Depends(get_user_func)):
     if current_user["role"] != "student":
@@ -435,21 +565,24 @@ async def get_schedule(current_user = Depends(get_user_func)):
     if current_user["role"] != "student":
         raise HTTPException(status_code=403, detail="Forbidden")
 
-    async with db.pool.acquire() as conn:
-        schedule = await conn.fetch("""
-            SELECT 
-                lessons.weekday,
-                subjects.name AS subject_name,
-                users.name AS teacher_name,
-                lessons.room
-            FROM lessons
-            JOIN subjects ON lessons.subject_id = subjects.id
-            JOIN teachers ON lessons.teacher_id = teachers.id
-            JOIN users ON teachers.user_id = users.id
-            JOIN students ON lessons.class_id = students.class_id
-            WHERE students.user_id = $1
-            ORDER BY lessons.weekday, lessons.time
-        """, current_user["id"])
+    try:
+        async with db.pool.acquire() as conn:
+            schedule = await conn.fetch("""
+                SELECT 
+                    lessons.weekday,
+                    subjects.name AS subject_name,
+                    users.name AS teacher_name,
+                    lessons.room
+                FROM lessons
+                JOIN subjects ON lessons.subject_id = subjects.id
+                JOIN teachers ON lessons.teacher_id = teachers.id
+                JOIN users ON teachers.user_id = users.id
+                JOIN students ON lessons.class_id = students.class_id
+                WHERE students.user_id = $1
+                ORDER BY lessons.weekday, lessons.time
+            """, current_user["id"])
+    except asyncpg.UndefinedTableError:
+        return []
 
     return [dict(row) for row in schedule]
 
@@ -482,27 +615,68 @@ async def get_teacher_schedule(current_user = Depends(get_user_func)):
     if current_user["role"] != "teacher":
         raise HTTPException(status_code=403, detail="Forbidden")
 
-    async with db.pool.acquire() as conn:
-        schedule = await conn.fetch(
-            """
-            SELECT
-                lessons.weekday,
-                classes.number || classes.letter AS class_name,
-                subjects.name AS subject_name,
-                lessons.room
-            FROM lessons
-            JOIN subjects ON lessons.subject_id = subjects.id
-            JOIN classes ON lessons.class_id = classes.id
-            JOIN teachers ON lessons.teacher_id = teachers.id
-            WHERE teachers.user_id = $1
-            ORDER BY lessons.weekday, lessons.time
-            """,
-            current_user["id"]
-        )
+    try:
+        async with db.pool.acquire() as conn:
+            schedule = await conn.fetch(
+                """
+                SELECT
+                    lessons.weekday,
+                    classes.number || classes.letter AS class_name,
+                    subjects.name AS subject_name,
+                    lessons.room
+                FROM lessons
+                JOIN subjects ON lessons.subject_id = subjects.id
+                JOIN classes ON lessons.class_id = classes.id
+                JOIN teachers ON lessons.teacher_id = teachers.id
+                WHERE teachers.user_id = $1
+                ORDER BY lessons.weekday, lessons.time
+                """,
+                current_user["id"]
+            )
+    except asyncpg.UndefinedTableError:
+        return []
 
     return [dict(row) for row in schedule]
 
 # <! DELETE-запросы!> #
+
+@app.delete("/users/me")
+async def delete_current_user(current_user = Depends(get_user_func)):
+    async with db.pool.acquire() as conn:
+        async with conn.transaction():
+            if current_user["role"] == "student":
+                await conn.execute(
+                    "DELETE FROM students WHERE user_id = $1",
+                    current_user["id"]
+                )
+            elif current_user["role"] == "teacher":
+                teacher = await conn.fetchrow(
+                    "SELECT id FROM teachers WHERE user_id = $1",
+                    current_user["id"]
+                )
+                if teacher:
+                    await conn.execute(
+                        "DELETE FROM teacher_class_subjects WHERE teacher_id = $1",
+                        teacher["id"]
+                    )
+                    await conn.execute(
+                        "UPDATE subjects SET teacher_id = NULL WHERE teacher_id = $1",
+                        teacher["id"]
+                    )
+                    await conn.execute(
+                        "DELETE FROM teachers WHERE user_id = $1",
+                        current_user["id"]
+                    )
+
+            deleted = await conn.execute(
+                "DELETE FROM users WHERE id = $1",
+                current_user["id"]
+            )
+
+    if deleted.endswith("0"):
+        raise HTTPException(status_code=404, detail="Пользователь не найден")
+
+    return {"status": "successful"}
 
 @app.delete("/admin/assign/{id}")
 async def delete_assignment(id: int, current_user = Depends(get_user_func)):
@@ -515,7 +689,7 @@ async def delete_assignment(id: int, current_user = Depends(get_user_func)):
         if not existing:
             raise HTTPException(status_code=404, detail=f"Assignment {id} Not Found")
         
-        conn.execute("""
+        await conn.execute("""
             DELETE FROM teacher_class_subjects WHERE id = $1""", id)
     return {"status": "successful"}
 
@@ -560,6 +734,123 @@ async def delete_grade(grade_id: int, current_user = Depends(get_user_func)):
     return {"status": "successful"}
 
 # <! POST-запросы!> #
+
+@app.post("/admin/users")
+async def create_admin_user(payload: AdminCreate, current_user = Depends(get_user_func)):
+    if current_user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin Only Endpoint")
+
+    name = payload.name.strip()
+    email = payload.email.strip().lower()
+    password = payload.password
+
+    if not name or not email or not password:
+        raise HTTPException(status_code=400, detail="Нужно заполнить имя, почту и пароль")
+
+    async with db.pool.acquire() as conn:
+        existing_user = await conn.fetchrow(
+            "SELECT id FROM users WHERE email = $1",
+            email
+        )
+        if existing_user:
+            raise HTTPException(status_code=400, detail="Email already registered")
+
+        password_hash = hash_password(password)
+        created_user = await conn.fetchrow(
+            """
+            INSERT INTO users (name, email, passwd_hash, role)
+            VALUES ($1, $2, $3, 'admin')
+            RETURNING id, name, email, role
+            """,
+            name,
+            email,
+            password_hash
+        )
+
+    return dict(created_user)
+
+@app.post("/admin/classes")
+async def create_admin_class(payload: ClassCreate, current_user = Depends(get_user_func)):
+    if current_user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin Only Endpoint")
+
+    letter = payload.letter.strip().upper()
+    school_name = payload.school_name.strip()
+
+    if payload.number <= 0:
+        raise HTTPException(status_code=400, detail="Номер класса должен быть больше нуля")
+    if not letter:
+        raise HTTPException(status_code=400, detail="Буква класса обязательна")
+    if not school_name:
+        raise HTTPException(status_code=400, detail="Укажите школу")
+
+    async with db.pool.acquire() as conn:
+        school_id = await get_or_create_school_id(conn, school_name)
+
+        existing_class = await conn.fetchrow(
+            """
+            SELECT id FROM classes
+            WHERE number = $1 AND UPPER(letter) = $2 AND school_id = $3
+            """,
+            payload.number,
+            letter,
+            school_id
+        )
+        if existing_class:
+            raise HTTPException(status_code=400, detail="Такой класс уже существует")
+
+        created_class = await conn.fetchrow(
+            """
+            INSERT INTO classes (number, letter, school_id)
+            VALUES ($1, $2, $3)
+            RETURNING id, number, letter, school_id
+            """,
+            payload.number,
+            letter,
+            school_id
+        )
+
+    return dict(created_class)
+
+@app.post("/admin/subjects")
+async def create_admin_subject(payload: SubjectCreate, current_user = Depends(get_user_func)):
+    if current_user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin Only Endpoint")
+
+    name = payload.name.strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="Название предмета обязательно")
+
+    async with db.pool.acquire() as conn:
+        class_exists = await conn.fetchrow(
+            "SELECT id FROM classes WHERE id = $1",
+            payload.class_id
+        )
+        if not class_exists:
+            raise HTTPException(status_code=400, detail="Класс не найден")
+
+        existing_subject = await conn.fetchrow(
+            """
+            SELECT id FROM subjects
+            WHERE LOWER(name) = LOWER($1) AND class_id = $2
+            """,
+            name,
+            payload.class_id
+        )
+        if existing_subject:
+            raise HTTPException(status_code=400, detail="Такой предмет уже есть у этого класса")
+
+        created_subject = await conn.fetchrow(
+            """
+            INSERT INTO subjects (name, class_id)
+            VALUES ($1, $2)
+            RETURNING id, name, class_id
+            """,
+            name,
+            payload.class_id
+        )
+
+    return dict(created_subject)
 
 @app.post("/auth/register")
 async def register(user: Register):
@@ -645,7 +936,7 @@ async def grades (grade_data: dict, current_user = Depends(get_user_func)):
     value = grade_data.get("value")
     date = grade_data.get("date")
 
-    if student_id is None or subject_id is None or value is None or date is None:
+    if student_id is None or value is None or date is None:
         raise HTTPException(
             status_code=400,
             detail="Missing required grade fields"
@@ -665,16 +956,41 @@ async def grades (grade_data: dict, current_user = Depends(get_user_func)):
                 detail="Forbidden. You aren't a teacher"
             )
         
-        subject_teacher_class_id = await conn.fetchrow("""
-            SELECT class_id, teacher_id FROM subjects WHERE id = $1
-            """,
-            subject_id
-            )
+        if subject_id is None:
+            student_class_id = await conn.fetchrow("""
+                SELECT class_id FROM students WHERE id = $1
+                """,
+                student_id
+                )
+
+            if student_class_id == None:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Not Found"
+                )
+
+            subject_teacher_class_id = await conn.fetchrow("""
+                SELECT id, class_id, teacher_id FROM subjects
+                WHERE class_id = $1 AND teacher_id = $2
+                ORDER BY id
+                LIMIT 1
+                """,
+                student_class_id["class_id"],
+                teacher_id["id"]
+                )
+            if subject_teacher_class_id:
+                subject_id = subject_teacher_class_id["id"]
+        else:
+            subject_teacher_class_id = await conn.fetchrow("""
+                SELECT id, class_id, teacher_id FROM subjects WHERE id = $1
+                """,
+                subject_id
+                )
         
         if subject_teacher_class_id == None:
             raise HTTPException(
                 status_code=404,
-                detail="Not Found"
+                detail="Subject not found for this teacher and class"
             )
         
         if teacher_id["id"] != subject_teacher_class_id["teacher_id"]:
@@ -766,7 +1082,7 @@ async def post_assign(assign: Assign, current_user = Depends(get_user_func)):
             VALUES ($1, $2, $3)
             RETURNING id
             """,
-            assign["teacher_id"], assign["class_id"], assign["subject_id"])
+            assign.teacher_id, assign.class_id, assign.subject_id)
     
     return assignment["id"]
 

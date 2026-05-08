@@ -572,6 +572,17 @@ function setupAdminNav(token) {
   });
 }
 
+async function requestJson(url, options = {}) {
+  const response = await fetch(url, options);
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(data.detail || "Ошибка запроса");
+  }
+
+  return data;
+}
+
 function loadPage(page, token) {
   const container = document.getElementById("admin-content");
 
@@ -587,7 +598,10 @@ function loadPage(page, token) {
 
   if (page === "teachers") {
     container.innerHTML = `
-      <h1 class="admin-page-title">Учителя</h1>
+      <div class="admin-page-head">
+        <h1 class="admin-page-title">Учителя</h1>
+        <p class="admin-page-subtitle">Список преподавателей, которых можно назначать на классы и предметы.</p>
+      </div>
       <div class="assignments-list" id="teachers-list"></div>
     `;
     loadTeachers(token);
@@ -596,16 +610,81 @@ function loadPage(page, token) {
 
   if (page === "classes") {
     container.innerHTML = `
-      <h1 class="admin-page-title">Классы</h1>
+      <div class="admin-page-head">
+        <h1 class="admin-page-title">Классы</h1>
+        <p class="admin-page-subtitle">Создание новых классов и просмотр текущей структуры по школе.</p>
+      </div>
+      <div class="admin-form-card">
+        <div class="admin-form-grid admin-form-grid-3">
+          <input class="dash-input" id="class-number" type="number" min="1" placeholder="Номер">
+          <input class="dash-input" id="class-letter" type="text" maxlength="2" placeholder="Буква">
+          <input class="dash-input" id="class-school" type="text" placeholder="Школа">
+        </div>
+        <div class="admin-form-actions">
+          <button class="accent-button" id="create-class-btn">Создать класс</button>
+        </div>
+        <div class="assign-error" id="class-error"></div>
+      </div>
       <div class="assignments-list" id="classes-list"></div>
     `;
+    initClassCreateForm(token);
     loadAdminClasses(token);
+    return;
+  }
+
+  if (page === "subjects") {
+    container.innerHTML = `
+      <div class="admin-page-head">
+        <h1 class="admin-page-title">Предметы</h1>
+        <p class="admin-page-subtitle">Добавление предметов к классам до назначения учителей.</p>
+      </div>
+      <div class="admin-form-card">
+        <div class="admin-form-grid admin-form-grid-2">
+          <input class="dash-input" id="subject-name" type="text" placeholder="Название предмета">
+          <select class="assign-select" id="subject-class-select"></select>
+        </div>
+        <div class="admin-form-actions">
+          <button class="accent-button" id="create-subject-btn">Создать предмет</button>
+        </div>
+        <div class="assign-error" id="subject-error"></div>
+      </div>
+      <div class="assignments-list" id="subjects-list"></div>
+    `;
+    initSubjectCreateForm(token);
+    loadSubjects(token);
+    return;
+  }
+
+  if (page === "admins") {
+    container.innerHTML = `
+      <div class="admin-page-head">
+        <h1 class="admin-page-title">Админы</h1>
+        <p class="admin-page-subtitle">Создание новых административных аккаунтов без открытия публичной регистрации.</p>
+      </div>
+      <div class="admin-form-card">
+        <div class="admin-form-grid admin-form-grid-3">
+          <input class="dash-input" id="admin-name" type="text" placeholder="Имя">
+          <input class="dash-input" id="admin-email" type="email" placeholder="Почта">
+          <input class="dash-input" id="admin-password" type="password" placeholder="Пароль">
+        </div>
+        <div class="admin-form-actions">
+          <button class="accent-button" id="create-admin-btn">Создать админа</button>
+        </div>
+        <div class="assign-error" id="admin-error"></div>
+      </div>
+      <div class="assignments-list" id="admins-list"></div>
+    `;
+    initAdminCreateForm(token);
+    loadAdmins(token);
     return;
   }
 
   if (page === "analytics") {
     container.innerHTML = `
-      <h1 class="admin-page-title">Аналитика</h1>
+      <div class="admin-page-head">
+        <h1 class="admin-page-title">Аналитика</h1>
+        <p class="admin-page-subtitle">Сводные показатели пользователей, ролей, классов и среднего балла.</p>
+      </div>
       <div id="analytics-content"></div>
     `;
     loadAnalytics(token);
@@ -644,13 +723,13 @@ async function loadAssignData(token) {
   const errorEl = document.getElementById("assign-error");
   try {
     const [teachers, classes, subjects] = await Promise.all([
-      fetch("/api/admin/teachers",  { headers: { Authorization: "Bearer " + token } }).then(r => r.json()),
-      fetch("/api/classes").then(r => r.json()),
-      fetch("/api/admin/subjects",  { headers: { Authorization: "Bearer " + token } }).then(r => r.json())
+      requestJson("/api/admin/teachers", { headers: { Authorization: "Bearer " + token } }),
+      requestJson("/api/classes"),
+      requestJson("/api/admin/subjects", { headers: { Authorization: "Bearer " + token } })
     ]);
 
     fillSelect("teacher-select", teachers, "Учитель");
-    fillSelect("class-select",   classes,  "Класс");
+    fillSelect("class-select",   classes.map(item => ({ id: item.id, name: item.class })), "Класс");
     fillSelect("subject-select", subjects, "Предмет");
 
     initAssignButton(token);
@@ -763,9 +842,9 @@ async function loadTeachers(token) {
   container.innerHTML = "<p class='text'>Загрузка...</p>";
 
   try {
-    const data = await fetch("/api/admin/teachers", {
+    const data = await requestJson("/api/admin/teachers", {
       headers: { "Authorization": "Bearer " + token }
-    }).then(r => r.json());
+    });
 
     container.innerHTML = "";
 
@@ -785,14 +864,44 @@ async function loadTeachers(token) {
   }
 }
 
+async function loadAdmins(token) {
+  const container = document.getElementById("admins-list");
+  container.innerHTML = "<p class='text'>Загрузка...</p>";
+
+  try {
+    const data = await requestJson("/api/admin/admins", {
+      headers: { "Authorization": "Bearer " + token }
+    });
+
+    container.innerHTML = "";
+
+    if (data.length === 0) {
+      container.innerHTML = "<p class='list-empty'>Нет админов</p>";
+      return;
+    }
+
+    data.forEach(admin => {
+      const div = document.createElement("div");
+      div.classList.add("assignment-card");
+      div.innerHTML = `
+        <span class="assignment-subject">${admin.name}</span>
+        <span class="assignment-teacher">${admin.email}</span>
+      `;
+      container.appendChild(div);
+    });
+  } catch {
+    container.innerHTML = "<p class='text'>Ошибка загрузки</p>";
+  }
+}
+
 async function loadAdminClasses(token) {
   const container = document.getElementById("classes-list");
   container.innerHTML = "<p class='text'>Загрузка...</p>";
 
   try {
-    const data = await fetch("/api/admin/classes", {
+    const data = await requestJson("/api/admin/classes", {
       headers: { "Authorization": "Bearer " + token }
-    }).then(r => r.json());
+    });
 
     container.innerHTML = "";
 
@@ -813,6 +922,159 @@ async function loadAdminClasses(token) {
   } catch {
     container.innerHTML = "<p class='text'>Ошибка загрузки</p>";
   }
+}
+
+async function loadSubjects(token) {
+  const container = document.getElementById("subjects-list");
+  container.innerHTML = "<p class='text'>Загрузка...</p>";
+
+  try {
+    const data = await requestJson("/api/admin/subjects", {
+      headers: { "Authorization": "Bearer " + token }
+    });
+
+    container.innerHTML = "";
+
+    if (data.length === 0) {
+      container.innerHTML = "<p class='list-empty'>Нет предметов</p>";
+      return;
+    }
+
+    data.forEach(subject => {
+      const div = document.createElement("div");
+      div.classList.add("assignment-card");
+      div.innerHTML = `
+        <span class="assignment-subject">${subject.name}</span>
+        <span class="assignment-teacher">${subject.class}</span>
+      `;
+      container.appendChild(div);
+    });
+  } catch {
+    container.innerHTML = "<p class='text'>Ошибка загрузки</p>";
+  }
+}
+
+async function initClassCreateForm(token) {
+  const btn = document.getElementById("create-class-btn");
+  const errorEl = document.getElementById("class-error");
+
+  btn.addEventListener("click", async () => {
+    const number = Number(document.getElementById("class-number").value);
+    const letter = document.getElementById("class-letter").value.trim();
+    const school_name = document.getElementById("class-school").value.trim();
+
+    if (!number || !letter || !school_name) {
+      errorEl.textContent = "Заполни номер, букву и школу";
+      errorEl.style.display = "block";
+      return;
+    }
+
+    try {
+      await requestJson("/api/admin/classes", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + token
+        },
+        body: JSON.stringify({ number, letter, school_name })
+      });
+
+      errorEl.style.display = "none";
+      document.getElementById("class-number").value = "";
+      document.getElementById("class-letter").value = "";
+      document.getElementById("class-school").value = "";
+      loadAdminClasses(token);
+    } catch (error) {
+      errorEl.textContent = error.message;
+      errorEl.style.display = "block";
+    }
+  });
+}
+
+async function initSubjectCreateForm(token) {
+  const errorEl = document.getElementById("subject-error");
+  const classSelect = document.getElementById("subject-class-select");
+  classSelect.innerHTML = "<option value=''>Класс</option>";
+
+  try {
+    const classes = await requestJson("/api/classes");
+    classes.forEach(item => {
+      const option = document.createElement("option");
+      option.value = item.id;
+      option.textContent = item.class;
+      classSelect.appendChild(option);
+    });
+  } catch (error) {
+    errorEl.textContent = "Не удалось загрузить классы";
+    errorEl.style.display = "block";
+  }
+
+  document.getElementById("create-subject-btn").addEventListener("click", async () => {
+    const name = document.getElementById("subject-name").value.trim();
+    const class_id = Number(classSelect.value);
+
+    if (!name || !class_id) {
+      errorEl.textContent = "Укажи предмет и класс";
+      errorEl.style.display = "block";
+      return;
+    }
+
+    try {
+      await requestJson("/api/admin/subjects", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + token
+        },
+        body: JSON.stringify({ name, class_id })
+      });
+
+      errorEl.style.display = "none";
+      document.getElementById("subject-name").value = "";
+      classSelect.value = "";
+      loadSubjects(token);
+    } catch (error) {
+      errorEl.textContent = error.message;
+      errorEl.style.display = "block";
+    }
+  });
+}
+
+function initAdminCreateForm(token) {
+  const btn = document.getElementById("create-admin-btn");
+  const errorEl = document.getElementById("admin-error");
+
+  btn.addEventListener("click", async () => {
+    const name = document.getElementById("admin-name").value.trim();
+    const email = document.getElementById("admin-email").value.trim();
+    const password = document.getElementById("admin-password").value;
+
+    if (!name || !email || !password) {
+      errorEl.textContent = "Заполни имя, почту и пароль";
+      errorEl.style.display = "block";
+      return;
+    }
+
+    try {
+      await requestJson("/api/admin/users", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + token
+        },
+        body: JSON.stringify({ name, email, password })
+      });
+
+      errorEl.style.display = "none";
+      document.getElementById("admin-name").value = "";
+      document.getElementById("admin-email").value = "";
+      document.getElementById("admin-password").value = "";
+      loadAdmins(token);
+    } catch (error) {
+      errorEl.textContent = error.message;
+      errorEl.style.display = "block";
+    }
+  });
 }
 
 async function loadAnalytics(token) {

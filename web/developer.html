@@ -33,40 +33,85 @@
       </div>
     </header>
 
-    <main class="page-content">
-      <section class="developer-card">
-        <div class="developer-hero">
-          <div class="developer-avatar">i</div>
-          <div>
-            <span class="section-tag">РАЗРАБОТЧИК</span>
-            <h1>itz_rival</h1>
-            <p class="developer-subtitle"><span id="dev-age-span"></span>, создаю Nolejje на стеке Python, JS, Docker, FastAPI, HTML, CSS, Nginx.</p>
-            <div class="developer-stats">
-              <div>
-                <span class="stat-label">Возраст</span>
-                <strong id="developer-age">Загрузка...</strong>
-              </div>
-              <div>
-                <span class="stat-label">Стек</span>
-                <strong>Python · JS · Aiogram · Docker · FastAPI · HTML · CSS · Nginx</strong>
-              </div>
+    <main class="page-content page-shell developer-page">
+      <section class="hero-card developer-hero-card">
+        <div class="hero-copy">
+          <span class="section-tag">РАЗРАБОТЧИК</span>
+          <h1>itz_rival</h1>
+          <p class="hero-description"><span id="dev-age-span"></span>, собираю Nolejje как цельный продукт: API, интерфейс, инфраструктуру и визуальную систему без сборки из шаблонов.</p>
+          <div class="hero-metrics">
+            <div class="metric-card">
+              <span class="metric-label">Возраст</span>
+              <strong id="developer-age">Загрузка...</strong>
+            </div>
+            <div class="metric-card">
+              <span class="metric-label">Фокус</span>
+              <strong>Продукт, который ощущается собранным</strong>
+            </div>
+            <div class="metric-card">
+              <span class="metric-label">Стек</span>
+              <strong>Python · JS · FastAPI · Docker</strong>
             </div>
           </div>
         </div>
+        <div class="hero-aside developer-signature">
+          <div class="developer-avatar">IR</div>
+          <div class="developer-signature-copy">
+            <span class="eyebrow">building nolejje</span>
+            <strong>Full-cycle solo dev</strong>
+            <p>От архитектуры до интерфейса.</p>
+          </div>
+        </div>
+      </section>
 
-        <div class="developer-body">
-          <p>Этот проект делаю сам: фронтенд, бэкенд, дизайн и документацию. Возраст подсчитывается автоматически, но дата рождения скрыта — на сервере возвращается только текущий возраст.</p>
+      <section class="panel-grid developer-grid">
+        <article class="surface-card feature-card feature-card-wide">
+          <div class="card-heading">
+            <div>
+              <span class="card-kicker">Подход</span>
+              <h2>Как собирается продукт</h2>
+            </div>
+          </div>
+          <p class="developer-copy">Nolejje делается как законченный инструмент, а не как учебный CRUD. Поэтому backend, UX, тексты интерфейса и визуальный ритм проектируются вместе, чтобы продукт выглядел уверенно даже в небольших деталях.</p>
+        </article>
+
+        <article class="surface-card feature-card">
+          <div class="card-heading">
+            <div>
+              <span class="card-kicker">Стек</span>
+              <h2>Технологии</h2>
+            </div>
+          </div>
           <div class="tags-row">
             <span class="tag">python</span>
             <span class="tag">javascript</span>
-            <span class="tag">aiogram</span>
-            <span class="tag">docker</span>
             <span class="tag">fastapi</span>
+            <span class="tag">docker</span>
+            <span class="tag">aiogram</span>
             <span class="tag">html</span>
             <span class="tag">css</span>
             <span class="tag">nginx</span>
           </div>
-        </div>
+        </article>
+
+        <article class="surface-card feature-card">
+          <div class="card-heading">
+            <div>
+              <span class="card-kicker">Роль</span>
+              <h2>Зона ответственности</h2>
+            </div>
+          </div>
+          <ul class="feature-list">
+            <li>Проектирование API и структуры данных</li>
+            <li>Интерфейсы кабинета ученика, учителя и профиля</li>
+            <li>Поддержка окружения, Docker и проксирования</li>
+          </ul>
+        </article>
+
+        <article class="surface-card quote-card">
+          <span class="card-kicker">Принцип</span>
+          <p>Если экран выглядит сырым, значит продукт ещё не завершён. Поэтому даже служебные страницы должны быть цельными и читаемыми.</p>
+        </article>
       </section>
     </main>
   </div>

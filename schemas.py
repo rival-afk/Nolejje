@@ -23,3 +23,23 @@ class Assign(BaseModel):
   teacher_id: int
   class_id: int
   subject_id: int
+
+class UserUpdate(BaseModel):
+  name: str
+
+class AvatarUpdate(BaseModel):
+  avatar_url: str
+
+class AdminCreate(BaseModel):
+  name: str
+  email: str
+  password: str
+
+class ClassCreate(BaseModel):
+  number: int
+  letter: str
+  school_name: str
+
+class SubjectCreate(BaseModel):
+  name: str
+  class_id: int
